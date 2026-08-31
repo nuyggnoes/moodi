@@ -122,13 +122,13 @@ shared/ui/             reusable primitives (mood badge, record card, ...)
 
 ## CI/CD & Branching
 
-Set up in **week 1, before feature work** — it's infrastructure used every commit, not a finishing step. Full detail and setup steps in `docs/ci-cd.md`.
+Set up in **week 1, before feature work** — it's infrastructure used every commit, not a finishing step. Full detail in `docs/ci-cd.md`; deploy-strategy rationale in `docs/adr/0002-ci-cd-deploy-strategy.md`.
 
-- **Vercel git auto-deploy for production is disabled** — GitHub Actions controls deployment. (Vercel "Ignored Build Step" returns `exit 0` when `VERCEL_ENV == production`; PR preview deploys stay enabled.)
-- `.github/workflows/ci-cd.yml`: `verify` (lint → typecheck → test → build) → `e2e` (Playwright smoke) → `deploy` (Vercel CLI, only on `push` to `main`).
-- `deploy` runs in the GitHub `production` environment behind a **required-reviewer approval gate** — merging to `main` is not the same as going live.
+- **CI** — `.github/workflows/ci.yml`, job `verify` (lint → typecheck → test → build) on every PR and `main` push. `e2e` (Playwright smoke) added week 2+.
+- **CD** — Vercel Git integration: PR → preview deploy, `main` merge → production deploy. No Actions deploy job, no approval gate (see ADR-0002 — Actions-triggered deploy was considered and dropped for MVP scope).
+- Runtime env vars (Supabase / Spotify / LLM) go in **Vercel project → Environment Variables**; also add to GitHub Secrets once `npm run build` in CI needs them.
 - **GitHub Flow**: `main` only, always deployable. Short-lived `feature/*` and `fix/*` branches. Branch protection requires a PR plus the `verify` status check before merge.
-- **Split PRs small enough to merge before they're wired to a screen** (e.g. API/logic first, UI wiring in a later PR) — the approval gate decouples merge time from go-live.
+- **Split PRs small enough to merge before they're wired to a screen** (e.g. API/logic first, UI wiring in a later PR) — since `main` merge deploys straight to production.
 
 ## Development Order
 
