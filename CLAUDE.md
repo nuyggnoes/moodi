@@ -36,7 +36,8 @@ npm run dev        # dev server
 npm run build      # production build
 npm run lint       # ESLint
 npm run typecheck  # tsc --noEmit
-npm run test       # unit tests (Jest/RTL) — not set up yet; CI will run: npm run test -- --ci
+npm run test       # unit tests (Jest + Testing Library); CI runs: npm run test -- --ci
+npm run test:watch # watch mode (local)
 ```
 
 E2E (added week 2+, Chromium smoke only — login → record → view flow):
