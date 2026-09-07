@@ -24,7 +24,7 @@ When these docs and this file disagree, the docs are newer — reconcile before 
 - **Styling**: Tailwind CSS
 - **State**: Zustand (client state) + TanStack Query (server state / caching)
 - **Backend**: Supabase (PostgreSQL, Auth, Realtime, Storage) with Row Level Security
-- **Music**: Spotify API — Client Credentials flow, server-side only
+- **Music**: iTunes Search API (Apple) — no auth/key; called server-side via a Route Handler for caching + rate-limit
 - **AI**: LLM API (OpenAI or Claude) — server-side only, called through Next.js Route Handlers
 
 ## Commands
@@ -50,12 +50,10 @@ npx playwright test --project=chromium
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SPOTIFY_CLIENT_ID=
-SPOTIFY_CLIENT_SECRET=
 LLM_API_KEY=              # OpenAI or Anthropic key — server-side only
 ```
 
-Spotify uses Client Credentials flow (no user OAuth needed for search/preview).
+The iTunes Search API needs no key — nothing to configure for music search.
 
 ## Architecture
 
@@ -65,7 +63,7 @@ Spotify uses Client Credentials flow (no user OAuth needed for search/preview).
 | `/` | Realtime feed of followed users' records |
 | `/record` | Capture today's music + mood fast (2–3 taps); includes AI mood suggestion |
 | `/diary` | Personal music calendar, mood-colored, with AI daily comment |
-| `/search` | Music search (Spotify) & user search (by nickname) |
+| `/search` | Music search (iTunes) & user search (by nickname) |
 | `/profile/[id]` | Public user profile — their record history |
 
 ### Database Schema (Supabase PostgreSQL)
@@ -97,11 +95,11 @@ Two LLM endpoints, deliberately split by sync vs async so the AI never blocks th
   - Client shows a skeleton, then reconciles via TanStack Query `invalidateQueries` / optimistic update when the comment arrives.
   - On failure: surface a retry button.
 
-- **API keys stay server-side.** The client always calls internal routes (`/api/...`), never the LLM or Spotify directly.
+- **API keys stay server-side.** The client always calls internal routes (`/api/...`), never the LLM or the music API directly.
 - `mood_source` records whether the stored mood came from the AI suggestion or a manual pick — kept as a product metric (adoption rate), not just a UI detail.
 
-### Spotify
-Client Credentials flow inside Route Handlers (`/api/spotify/search`). Fetch and cache the token server-side. The frontend never talks to Spotify directly.
+### Music (iTunes Search API)
+The frontend never calls iTunes directly — it hits `/api/music/search`, a Route Handler that wraps a `MusicProvider` implementation (`shared/lib/music/`) and returns a normalized response (`trackId`, `trackName`, `artist`, `albumArt`, `previewUrl`). No auth or API key. A short server-side cache absorbs the iTunes Search API rate limit (~20 req/min); the client debounces search input. Swapping providers later = a new `MusicProvider` impl + one wiring change. Rationale: `docs/adr/0003-music-provider-itunes.md`.
 
 ### Auth
 Supabase Auth email login/signup. On first login, redirect to profile setup (nickname + avatar). Route protection via middleware.
@@ -126,7 +124,7 @@ Set up in **week 1, before feature work** — it's infrastructure used every com
 
 - **CI** — `.github/workflows/ci.yml`, job `verify` (lint → typecheck → test → build) on every PR and `main` push. `e2e` (Playwright smoke) added week 2+.
 - **CD** — Vercel Git integration: PR → preview deploy, `main` merge → production deploy. No Actions deploy job, no approval gate (see ADR-0002 — Actions-triggered deploy was considered and dropped for MVP scope).
-- Runtime env vars (Supabase / Spotify / LLM) go in **Vercel project → Environment Variables**; also add to GitHub Secrets once `npm run build` in CI needs them.
+- Runtime env vars (Supabase / LLM) go in **Vercel project → Environment Variables**; also add to GitHub Secrets once `npm run build` in CI needs them.
 - **GitHub Flow**: `main` only, always deployable. Short-lived `feature/*` and `fix/*` branches. Branch protection requires a PR plus the `verify` status check before merge.
 - **Split PRs small enough to merge before they're wired to a screen** (e.g. API/logic first, UI wiring in a later PR) — since `main` merge deploys straight to production.
 
@@ -136,7 +134,7 @@ Set up in **week 1, before feature work** — it's infrastructure used every com
 1. Next.js/TS/Tailwind scaffold + lightweight-FSD folders + CI/CD pipeline + branch protection
 2. Supabase project + schema/RLS migration
 3. Auth (login/signup/profile setup)
-4. Spotify search Route Handler
+4. iTunes search Route Handler (`/api/music/search`)
 5. Record form + AI mood-tag suggestion (`/api/ai/mood-suggest`)
 6. Calendar history (`/diary`) + AI daily comment (`/api/ai/daily-comment`, async UI)
 7. Follow & user search (basic) + profile page

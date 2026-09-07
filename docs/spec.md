@@ -7,7 +7,7 @@ AI가 메모를 분석해 기분 태그를 추천하고, 하루의 기록을 감
 ## 기술 스택
 - **Frontend**: Next.js, TypeScript, Tailwind CSS, TanStack Query, Zustand
 - **Backend**: Supabase (DB, Auth, Realtime, Storage)
-- **External API**: Spotify API (음악 검색, 앨범아트, 30초 미리듣기)
+- **External API**: iTunes Search API (Apple) — 음악 검색, 앨범아트, 30초 미리듣기 (인증 불필요)
 - **AI**: LLM API (OpenAI/Claude) — Next.js Route Handler를 통한 서버사이드 호출
 
 ## 핵심 기능
@@ -17,7 +17,7 @@ AI가 메모를 분석해 기분 태그를 추천하고, 하루의 기록을 감
 - 프로필 설정 (닉네임, 프로필 이미지)
 
 ### 2. 음악 기록
-- Spotify API로 음악 검색
+- iTunes Search API로 음악 검색
 - 오늘의 음악 등록
   - 곡명, 아티스트, 앨범아트, 30초 미리듣기
   - 기분 태그 선택 (설레는, 차분한, 신나는, 우울한, 집중되는)
@@ -68,7 +68,7 @@ AI가 메모를 분석해 기분 태그를 추천하고, 하루의 기록을 감
 - `likes` 좋아요 (user_id, record_id)
 
 ## AI 연동 설계 메모
-- API 키 보호를 위해 클라이언트에서 LLM을 직접 호출하지 않고, Next.js Route Handler를 프록시로 사용
+- API 키 보호를 위해 클라이언트에서 LLM을 직접 호출하지 않고, Next.js Route Handler를 프록시로 사용 (외부 음악 API도 클라이언트에서 직접 호출하지 않고 Route Handler 경유 — iTunes는 키가 없지만 rate-limit 완화·서버 캐시 목적)
 - mood 추천은 동기 호출(기록 저장 전 즉시 응답 필요), 코멘트 생성은 기록 저장 후 비동기(fire-and-forget + 클라이언트 재조회)로 분리해 저장 흐름이 AI 응답 속도에 막히지 않도록 설계
 - LLM 호출 실패 시 mood 추천은 조용히 스킵(사용자가 수동 선택), 코멘트는 재시도 버튼 노출 — AI 기능이 핵심 플로우(기록 저장)를 막지 않는 것을 원칙으로 함
 
@@ -77,7 +77,7 @@ AI가 메모를 분석해 기분 태그를 추천하고, 하루의 기록을 감
 ### MVP (1차, 목표 1개월)
 1. Supabase 프로젝트 세팅 + DB 테이블/RLS 정책 생성
 2. Auth 구현 (로그인/회원가입/프로필 설정)
-3. Spotify API 연동 (음악 검색)
+3. iTunes Search API 연동 (음악 검색)
 4. 음악 기록 기능 + AI 기분 태그 추천
 5. 달력 기반 내 기록 조회 + AI 코멘트 노출
 6. 팔로우 & 유저 검색 (기초)
