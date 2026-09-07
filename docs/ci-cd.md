@@ -55,7 +55,7 @@ jobs:
 - Vercel 프로젝트 `moodi`가 GitHub `nuyggnoes/moodi`에 연결돼 있다.
 - **PR** → 프리뷰 배포 URL 자동 생성. merge 전에 실제 화면 확인 가능.
 - **`main` merge** → production 자동 배포 (`https://moodi-nuyggnoes-projects.vercel.app`).
-- 런타임 환경변수(Supabase, Spotify, LLM 키)는 **Vercel 프로젝트 Settings → Environment Variables**에 등록한다. CI의 `npm run build`가 이 값들을 요구하게 되면 GitHub Actions Secrets에도 별도로 넣어야 한다.
+- 런타임 환경변수(Supabase, LLM 키)는 **Vercel 프로젝트 Settings → Environment Variables**에 등록한다. CI의 `npm run build`가 이 값들을 요구하게 되면 GitHub Actions Secrets에도 별도로 넣어야 한다. (iTunes Search API는 키 불필요)
 
 ## 동작 흐름
 
