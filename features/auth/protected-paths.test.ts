@@ -1,17 +1,30 @@
-import { isProtectedPath } from "./protected-paths";
+import { requiresAuth, requiresProfile } from "./protected-paths";
 
-describe("isProtectedPath", () => {
+describe("requiresAuth", () => {
   it.each([
     ["/record", true],
     ["/record/edit", true],
     ["/diary", true],
     ["/diary/2026-09-14", true],
+    ["/profile/setup", true],
     ["/", false],
     ["/login", false],
     ["/signup", false],
     ["/search", false],
     ["/records", false],
   ])("%s -> %s", (path, expected) => {
-    expect(isProtectedPath(path)).toBe(expected);
+    expect(requiresAuth(path)).toBe(expected);
+  });
+});
+
+describe("requiresProfile", () => {
+  it.each([
+    ["/record", true],
+    ["/diary", true],
+    ["/profile/setup", false],
+    ["/", false],
+    ["/login", false],
+  ])("%s -> %s", (path, expected) => {
+    expect(requiresProfile(path)).toBe(expected);
   });
 });

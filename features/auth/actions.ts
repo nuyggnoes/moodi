@@ -2,9 +2,14 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/shared/lib/supabase/server";
+import { getUserProfile } from "@/entities/user/queries";
 import { mapAuthError, type AuthErrorCode } from "./error-codes";
 
 export type AuthActionState = { error: AuthErrorCode } | null;
+
+function redirectAfterAuth(hasProfile: boolean): never {
+  redirect(hasProfile ? "/" : "/profile/setup");
+}
 
 export async function signIn(
   _prevState: AuthActionState,
@@ -14,7 +19,7 @@ export async function signIn(
   const password = formData.get("password") as string;
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
@@ -23,7 +28,8 @@ export async function signIn(
     return { error: mapAuthError(error.message) };
   }
 
-  redirect("/");
+  const profile = await getUserProfile(data.user.id);
+  redirectAfterAuth(!!profile);
 }
 
 export async function signUp(
@@ -34,13 +40,14 @@ export async function signUp(
   const password = formData.get("password") as string;
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({ email, password });
 
   if (error) {
     return { error: mapAuthError(error.message) };
   }
 
-  redirect("/");
+  const profile = await getUserProfile(data.user!.id);
+  redirectAfterAuth(!!profile);
 }
 
 export async function signOut() {

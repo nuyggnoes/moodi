@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/shared/lib/supabase/database.types";
-import { isProtectedPath } from "@/features/auth/protected-paths";
+import { requiresAuth, requiresProfile } from "@/features/auth/protected-paths";
 
 /**
  * 세션 쿠키 갱신 + 보호 라우트 접근 제어.
@@ -37,8 +37,24 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (isProtectedPath(request.nextUrl.pathname) && !user) {
+  const pathname = request.nextUrl.pathname;
+
+  if (requiresAuth(pathname) && !user) {
     return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  if (user && requiresProfile(pathname)) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!profile) {
+      const setupUrl = new URL("/profile/setup", request.url);
+      setupUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(setupUrl);
+    }
   }
 
   return response;
