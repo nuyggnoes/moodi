@@ -16,7 +16,9 @@ export function ProfileSetupForm({ next }: { next: string }) {
     <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="next" value={next} />
       <div className="flex flex-col gap-1">
-        <label htmlFor="nickname">닉네임</label>
+        <label htmlFor="nickname" className="text-ink-dim">
+          닉네임
+        </label>
         <input
           id="nickname"
           name="nickname"
@@ -24,28 +26,30 @@ export function ProfileSetupForm({ next }: { next: string }) {
           required
           maxLength={20}
           autoComplete="nickname"
-          className="rounded border px-3 py-2"
+          className="rounded border border-border bg-surface px-3 py-2 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label htmlFor="avatar">프로필 이미지 (선택)</label>
+        <label htmlFor="avatar" className="text-ink-dim">
+          프로필 이미지 (선택)
+        </label>
         <input
           id="avatar"
           name="avatar"
           type="file"
           accept="image/*"
-          className="rounded border px-3 py-2"
+          className="rounded border border-border bg-surface px-3 py-2 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
         />
       </div>
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-error">
           {PROFILE_ERROR_MESSAGES[state.error]}
         </p>
       )}
       <button
         type="submit"
         disabled={pending}
-        className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+        className="rounded bg-accent px-4 py-2 text-bg disabled:opacity-50"
       >
         {pending ? "저장 중..." : "시작하기"}
       </button>

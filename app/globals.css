@@ -1,26 +1,26 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+/*
+ * Moodi 기본 다크 테마 — "다크 파스텔" (라벤더 미스트).
+ * 음악은 밤에 많이 듣는다는 전제로 다크 톤을 앱 아이덴티티로 고정한다(라이트 모드 없음).
+ * docs/ui-plan.md "다크 톤 방향 초기 결정" 참고. 색 값은 /search 화면 설계 과정에서 확정.
+ */
+@theme {
+  --color-bg: #232030;
+  --color-surface: #2d2839;
+  --color-surface-hover: #352f43;
+  --color-border: #3d364c;
+  --color-ink: #efeaf7;
+  --color-ink-dim: #a89fc0;
+  --color-ink-faint: #6e6580;
+  --color-accent: #baa7e0;
+  --color-error: #dba3a8;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-bg);
+  color: var(--color-ink);
   font-family: Arial, Helvetica, sans-serif;
 }
