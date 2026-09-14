@@ -142,3 +142,13 @@ Set up in **week 1, before feature work** — it's infrastructure used every com
 **Phase 2 (week 4, if time allows):** Realtime feed, realtime like reactions, UI polish, accessibility/perf pass.
 
 **Cut order if time runs short:** (1) Realtime feed + likes, (2) Playwright e2e (keep lint/typecheck/build), (3) follow/user search. Weeks 1–2 scope (record + AI mood suggestion + calendar) must ship regardless.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
