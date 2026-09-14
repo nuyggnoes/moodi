@@ -9,14 +9,13 @@ export const MOOD_OPTIONS: { value: Mood; label: string }[] = [
 ];
 
 /**
- * 무드별 포인트 색.
- * 지금은 전부 accent 하나를 가리키지만, /diary 설계에서 무드별 색을 정하면
- * 이 값들만 바꾸면 된다 — 이 값을 쓰는 컴포넌트(MoodPicker 등) 로직은 그대로 둔다.
+ * 무드별 포인트 색 (#12 /diary 설계에서 확정).
+ * 라벤더 미스트 다크 배경 대비가 충분하고 서로 구분되는 파스텔 톤.
  */
 export const MOOD_COLORS: Record<Mood, string> = {
-  exciting: "var(--color-accent)",
-  calm: "var(--color-accent)",
-  energetic: "var(--color-accent)",
-  sad: "var(--color-accent)",
-  focused: "var(--color-accent)",
+  exciting: "#e8a7c4",
+  calm: "#a7b8e8",
+  energetic: "#e8b175",
+  sad: "#8f9bb8",
+  focused: "#8fc9b0",
 };
