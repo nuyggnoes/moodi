@@ -20,7 +20,7 @@ export function LoginForm() {
           type="email"
           required
           autoComplete="email"
-          className="rounded border px-3 py-2"
+          className="rounded border border-border bg-surface px-3 py-2 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -31,23 +31,26 @@ export function LoginForm() {
           type="password"
           required
           autoComplete="current-password"
-          className="rounded border px-3 py-2"
+          className="rounded border border-border bg-surface px-3 py-2 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
         />
       </div>
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-error">
           {AUTH_ERROR_MESSAGES[state.error]}
         </p>
       )}
       <button
         type="submit"
         disabled={pending}
-        className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+        className="rounded bg-accent px-4 py-2 text-bg disabled:opacity-50"
       >
         {pending ? "로그인 중..." : "로그인"}
       </button>
-      <p className="text-sm">
-        계정이 없으신가요? <Link href="/signup">회원가입</Link>
+      <p className="text-sm text-ink-dim">
+        계정이 없으신가요?{" "}
+        <Link href="/signup" className="text-accent">
+          회원가입
+        </Link>
       </p>
     </form>
   );

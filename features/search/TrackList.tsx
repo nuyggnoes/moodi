@@ -1,0 +1,114 @@
+"use client";
+
+import { useRef, useState } from "react";
+import type { Track } from "@/shared/lib/music/types";
+
+function PlayIcon() {
+  return (
+    <svg viewBox="0 0 12 12" width={12} height={12} fill="currentColor" aria-hidden="true">
+      <path d="M2 1.2v9.6c0 .7.8 1.1 1.4.7l7.2-4.8c.5-.4.5-1.1 0-1.4L3.4.5C2.8.1 2 .5 2 1.2Z" />
+    </svg>
+  );
+}
+
+function PauseIcon() {
+  return (
+    <svg viewBox="0 0 12 12" width={12} height={12} fill="currentColor" aria-hidden="true">
+      <rect x="2" y="1" width="3" height="10" rx="0.8" />
+      <rect x="7" y="1" width="3" height="10" rx="0.8" />
+    </svg>
+  );
+}
+
+export function TrackList({ tracks }: { tracks: Track[] }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playingId, setPlayingId] = useState<number | null>(null);
+
+  function togglePreview(track: Track) {
+    const audio = audioRef.current;
+    if (!audio || !track.previewUrl) return;
+
+    if (playingId === track.trackId) {
+      audio.pause();
+      setPlayingId(null);
+      return;
+    }
+
+    audio.src = track.previewUrl;
+    audio.play();
+    setPlayingId(track.trackId);
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <ul className="flex flex-col gap-2">
+        {tracks.map((track) => {
+          const isPlaying = playingId === track.trackId;
+
+          return (
+            <li key={track.trackId}>
+              <button
+                type="button"
+                onClick={() => togglePreview(track)}
+                disabled={!track.previewUrl}
+                aria-label={`${track.trackName} ${isPlaying ? "정지" : "재생"}`}
+                className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-surface-hover disabled:cursor-default disabled:hover:bg-transparent"
+                style={
+                  isPlaying
+                    ? {
+                        background:
+                          "radial-gradient(130% 160% at 0% 50%, color-mix(in srgb, var(--color-accent) 26%, transparent), transparent 68%), var(--color-surface)",
+                      }
+                    : undefined
+                }
+              >
+                {track.albumArt ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- 외부(iTunes) 도메인, next/image 설정은 별도 이슈에서
+                  <img
+                    src={track.albumArt}
+                    alt=""
+                    width={64}
+                    height={64}
+                    className="shrink-0 rounded-[10px] object-cover"
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    className="h-16 w-16 shrink-0 rounded-[10px]"
+                    style={{
+                      background:
+                        "linear-gradient(150deg, color-mix(in srgb, var(--color-accent) 35%, var(--color-surface)), var(--color-border))",
+                    }}
+                  />
+                )}
+                <div className="flex flex-1 flex-col overflow-hidden">
+                  <span
+                    className={`truncate text-[13.5px] font-medium ${isPlaying ? "text-accent" : "text-ink"}`}
+                  >
+                    {track.trackName}
+                  </span>
+                  <span className="truncate text-[11.5px] text-ink-dim">
+                    {track.artist}
+                  </span>
+                </div>
+                {track.previewUrl && (
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                      isPlaying
+                        ? "bg-accent text-bg"
+                        : "border border-border bg-surface text-ink-dim"
+                    }`}
+                  >
+                    {isPlaying ? <PauseIcon /> : <PlayIcon />}
+                  </span>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <audio ref={audioRef} onEnded={() => setPlayingId(null)} hidden />
+    </div>
+  );
+}
