@@ -9,7 +9,7 @@ import {
 } from "@/shared/lib/recentSearches";
 import { useMusicSearch } from "./useMusicSearch";
 import { TrackList } from "./TrackList";
-import { RecentSearches } from "./RecentSearches";
+import { RecentSearches } from "@/shared/ui/RecentSearches";
 
 const DEBOUNCE_MS = 400;
 const NO_RECENT_SEARCHES: string[] = [];
