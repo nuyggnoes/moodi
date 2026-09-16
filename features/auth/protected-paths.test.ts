@@ -7,7 +7,7 @@ describe("requiresAuth", () => {
     ["/diary", true],
     ["/diary/2026-09-14", true],
     ["/profile/setup", true],
-    ["/", false],
+    ["/", true],
     ["/login", false],
     ["/signup", false],
     ["/search", false],
@@ -21,8 +21,8 @@ describe("requiresProfile", () => {
   it.each([
     ["/record", true],
     ["/diary", true],
+    ["/", true],
     ["/profile/setup", false],
-    ["/", false],
     ["/login", false],
   ])("%s -> %s", (path, expected) => {
     expect(requiresProfile(path)).toBe(expected);
