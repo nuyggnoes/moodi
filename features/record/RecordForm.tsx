@@ -5,20 +5,29 @@ import { SongPicker } from "./SongPicker";
 import { MoodPicker } from "./MoodPicker";
 import { saveRecord, type RecordActionState } from "./actions";
 import { RECORD_ERROR_MESSAGES } from "./error-codes";
+import { useMoodSuggestion } from "./useMoodSuggestion";
 import { AlbumArt } from "@/shared/ui/AlbumArt";
 import { PlayIcon, PauseIcon } from "@/shared/ui/icons";
 import type { Mood } from "@/entities/record/mood";
+import { MEMO_MAX_LENGTH } from "@/entities/record/memo";
 import type { Track } from "@/shared/lib/music/types";
 
-const MEMO_MAX_LENGTH = 200;
 const MEMO_COUNTER_THRESHOLD = 170;
 const initialState: RecordActionState = null;
 
 export function RecordForm() {
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
-  const [mood, setMood] = useState<Mood | null>(null);
+  // 사용자가 직접 고른 mood 만 상태로 둔다. 화면의 mood 는 "직접 고른 값 → AI 제안" 순으로 파생한다.
+  // 그래서 직접 고른 값은 항상 우선하고, 늦게 도착한 AI 제안은 자동으로 무시된다.
+  const [userMood, setUserMood] = useState<Mood | null>(null);
   const [memo, setMemo] = useState("");
   const [state, formAction, pending] = useActionState(saveRecord, initialState);
+
+  // 직접 고른 뒤에는 요청하지 않는다 (직접 고른 값이 항상 이기므로 결과를 쓸 일이 없다).
+  const { data, isFetching } = useMoodSuggestion(selectedTrack, memo, userMood === null);
+  const suggestion = data ?? null;
+  const mood = userMood ?? suggestion?.suggestedMood ?? null;
+  const moodSource = userMood === null && suggestion ? "ai" : "user";
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -103,7 +112,18 @@ export function RecordForm() {
               value={selectedTrack.previewUrl ?? ""}
             />
 
-            <MoodPicker value={mood} onChange={setMood} />
+            <input type="hidden" name="moodSource" value={moodSource} />
+
+            <MoodPicker
+              value={mood}
+              onChange={setUserMood}
+              loading={userMood === null && isFetching}
+              aiSuggestion={
+                moodSource === "ai" && suggestion
+                  ? { mood: suggestion.suggestedMood, reason: suggestion.reason }
+                  : null
+              }
+            />
 
             <div className="flex flex-col gap-1">
               <textarea
