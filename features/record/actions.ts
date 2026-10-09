@@ -2,16 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/shared/lib/supabase/server";
-import { MOOD_OPTIONS, type Mood } from "@/entities/record/mood";
+import { isMood } from "@/entities/record/mood";
 import type { RecordErrorCode } from "./error-codes";
 
 export type RecordActionState = { error: RecordErrorCode } | null;
-
-const VALID_MOODS = new Set<string>(MOOD_OPTIONS.map((option) => option.value));
-
-function isMood(value: string): value is Mood {
-  return VALID_MOODS.has(value);
-}
 
 export async function saveRecord(
   _prevState: RecordActionState,
@@ -24,6 +18,8 @@ export async function saveRecord(
   const previewUrl = (formData.get("previewUrl") as string | null) || null;
   const mood = formData.get("mood") as string | null;
   const memo = ((formData.get("memo") as string | null) ?? "").trim() || null;
+  // 알 수 없는 값은 "user" 로 취급한다 — 채택률 지표에 잘못된 "ai" 가 섞이지 않게 한다.
+  const moodSource = formData.get("moodSource") === "ai" ? "ai" : "user";
 
   if (!trackId || !trackName || !artist) {
     return { error: "track_required" };
@@ -49,7 +45,7 @@ export async function saveRecord(
     album_art: albumArt,
     preview_url: previewUrl,
     mood,
-    mood_source: "user",
+    mood_source: moodSource,
     memo,
   });
 

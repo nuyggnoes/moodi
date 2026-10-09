@@ -8,6 +8,12 @@ export const MOOD_OPTIONS: { value: Mood; label: string }[] = [
   { value: "focused", label: "집중되는" },
 ];
 
+const VALID_MOODS = new Set<string>(MOOD_OPTIONS.map((option) => option.value));
+
+export function isMood(value: unknown): value is Mood {
+  return typeof value === "string" && VALID_MOODS.has(value);
+}
+
 /**
  * 무드별 포인트 색 (#12 /diary 설계에서 확정).
  * 라벤더 미스트 다크 배경 대비가 충분하고 서로 구분되는 파스텔 톤.

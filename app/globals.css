@@ -24,3 +24,51 @@ body {
   color: var(--color-ink);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/*
+ * AI 무드 제안 표시 (/record).
+ * 칩 shimmer 는 요청 중임을 알리는 용도라 은은하게, 이유 문구는 바뀔 때 살짝 떠오르게 한다.
+ * 모션을 줄인 환경에서는 둘 다 끈다.
+ */
+@keyframes chip-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes mood-hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chip-shimmer {
+  background-image: linear-gradient(
+    110deg,
+    transparent 30%,
+    rgb(255 255 255 / 0.07) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: chip-shimmer 1.6s linear infinite;
+}
+
+.mood-hint-in {
+  display: inline-block;
+  animation: mood-hint-in 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip-shimmer,
+  .mood-hint-in {
+    animation: none;
+  }
+}
