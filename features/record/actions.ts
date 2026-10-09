@@ -1,8 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { createClient } from "@/shared/lib/supabase/server";
+import { commentGenerator } from "@/shared/lib/ai";
 import { isMood } from "@/entities/record/mood";
+import { COMMENT_MIN_MEMO_LENGTH } from "@/entities/record/comment";
+import { generateDailyComment } from "@/features/comment/generateDailyComment";
 import type { RecordErrorCode } from "./error-codes";
 
 export type RecordActionState = { error: RecordErrorCode } | null;
@@ -37,20 +41,45 @@ export async function saveRecord(
     redirect("/login");
   }
 
-  const { error } = await supabase.from("records").insert({
-    user_id: user.id,
-    track_id: trackId,
-    track_name: trackName,
-    artist,
-    album_art: albumArt,
-    preview_url: previewUrl,
-    mood,
-    mood_source: moodSource,
-    memo,
-  });
+  const { data: inserted, error } = await supabase
+    .from("records")
+    .insert({
+      user_id: user.id,
+      track_id: trackId,
+      track_name: trackName,
+      artist,
+      album_art: albumArt,
+      preview_url: previewUrl,
+      mood,
+      mood_source: moodSource,
+      memo,
+    })
+    .select("id")
+    .single();
 
-  if (error) {
+  if (error || !inserted) {
     return { error: "unknown" };
+  }
+
+  // 저장은 코멘트 생성을 기다리지 않는다. 응답(redirect)이 끝난 뒤 서버에서 이어서 만든다.
+  if (memo && memo.length >= COMMENT_MIN_MEMO_LENGTH) {
+    const recordId = inserted.id;
+    const userId = user.id;
+    after(async () => {
+      const result = await generateDailyComment(
+        { supabase: await createClient(), generator: commentGenerator },
+        userId,
+        recordId,
+      );
+      if (!result.success) {
+        // 메모 내용은 남기지 않는다. 실패하면 화면에서 "코멘트 받기"로 다시 시도할 수 있다.
+        console.error("daily-comment failed", {
+          recordId,
+          error: result.error,
+          cause: "cause" in result ? result.cause : undefined,
+        });
+      }
+    });
   }
 
   redirect("/");

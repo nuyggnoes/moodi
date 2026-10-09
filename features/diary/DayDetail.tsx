@@ -1,4 +1,5 @@
 import { AlbumArt } from "@/shared/ui/AlbumArt";
+import { AiComment } from "@/features/comment/AiComment";
 import { MOOD_OPTIONS, MOOD_COLORS } from "@/entities/record/mood";
 import type { MusicRecord } from "@/entities/record/types";
 
@@ -36,9 +37,7 @@ export function DayDetail({ records }: { records: MusicRecord[] }) {
             </span>
           </div>
           {record.memo && <p className="text-sm text-ink-dim">{record.memo}</p>}
-          <div className="rounded-xl border border-dashed border-border p-2 text-xs text-ink-faint">
-            {record.ai_comment ?? "AI 코멘트는 아직 준비 중이에요."}
-          </div>
+          <AiComment record={record} />
         </li>
       ))}
     </ul>
