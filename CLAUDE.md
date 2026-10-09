@@ -25,7 +25,7 @@ When these docs and this file disagree, the docs are newer — reconcile before 
 - **State**: Zustand (client state) + TanStack Query (server state / caching)
 - **Backend**: Supabase (PostgreSQL, Auth, Realtime, Storage) with Row Level Security
 - **Music**: iTunes Search API (Apple) — no auth/key; called server-side via a Route Handler for caching + rate-limit
-- **AI**: LLM API (OpenAI or Claude) — server-side only, called through Next.js Route Handlers
+- **AI**: LLM API (currently Gemini Flash-Lite free tier; swappable behind `MoodSuggester`, e.g. Claude Haiku — `docs/adr/0005-llm-provider-gemini.md`) — server-side only, called through Next.js Route Handlers
 
 ## Commands
 
@@ -50,7 +50,7 @@ npx playwright test --project=chromium
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-LLM_API_KEY=              # OpenAI or Anthropic key — server-side only
+LLM_API_KEY=              # LLM provider key (Gemini API key for now) — server-side only
 ```
 
 The iTunes Search API needs no key — nothing to configure for music search.
