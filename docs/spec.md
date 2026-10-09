@@ -8,7 +8,7 @@ AI가 메모를 분석해 기분 태그를 추천하고, 하루의 기록을 감
 - **Frontend**: Next.js, TypeScript, Tailwind CSS, TanStack Query, Zustand
 - **Backend**: Supabase (DB, Auth, Realtime, Storage)
 - **External API**: iTunes Search API (Apple) — 음악 검색, 앨범아트, 30초 미리듣기 (인증 불필요)
-- **AI**: LLM API (OpenAI/Claude) — Next.js Route Handler를 통한 서버사이드 호출
+- **AI**: LLM API (현재 Gemini Flash-Lite 무료 티어, `MoodSuggester` 인터페이스 뒤에서 교체 가능 — `docs/adr/0005-llm-provider-gemini.md`) — Next.js Route Handler를 통한 서버사이드 호출
 
 ## 핵심 기능
 
