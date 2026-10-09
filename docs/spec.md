@@ -34,7 +34,9 @@ AI가 메모를 분석해 기분 태그를 추천하고, 하루의 기록을 감
 - 기록이 저장되면 그날의 곡 + 무드 태그 + 메모를 조합해 LLM이 한 줄 코멘트를 생성 (예: "잔잔하게 스며드는 하루였네요")
 - 생성은 비동기로 처리 — 기록 저장은 즉시 완료되고, 코멘트는 스켈레톤 UI 이후 도착하는 대로 갱신 (낙관적 업데이트 + 스트리밍 UX 어필 포인트)
 - 달력 화면에서 날짜 클릭 시 해당 코멘트를 툴팁/카드로 노출
-- API: `POST /api/ai/daily-comment { trackName, artist, mood, memo } → { comment }`
+- 톤은 메모의 구체적 표현을 짚어 되돌려주는 "거울" 한 문장이며, 메모가 없으면 만들지 않는다. 마음이 많이 힘든 메모에는 고정 문구를 쓴다 (`docs/adr/0006-ai-comment-policy.md`)
+- 생성은 기록 저장 직후 서버가 시작하고(`after()`), 재시도용으로 API를 둔다. 서버가 `recordId`로 기록을 읽어 만들고 `records.ai_comment`에 저장한다
+- API: `POST /api/ai/daily-comment { recordId } → { comment }`
 
 ### 5. 실시간 피드 (Supabase Realtime)
 - 팔로우한 유저가 음악을 기록하면 피드에 실시간으로 표시

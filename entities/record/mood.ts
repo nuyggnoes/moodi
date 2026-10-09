@@ -10,6 +10,10 @@ export const MOOD_OPTIONS: { value: Mood; label: string }[] = [
 
 const VALID_MOODS = new Set<string>(MOOD_OPTIONS.map((option) => option.value));
 
+export function getMoodLabel(mood: string): string {
+  return MOOD_OPTIONS.find((option) => option.value === mood)?.label ?? mood;
+}
+
 export function isMood(value: unknown): value is Mood {
   return typeof value === "string" && VALID_MOODS.has(value);
 }
