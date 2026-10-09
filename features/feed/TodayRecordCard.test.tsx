@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TodayRecordCard } from "./TodayRecordCard";
 import type { MusicRecord } from "@/entities/record/types";
 
@@ -27,7 +28,7 @@ function Wrapper({ record }: { record: MusicRecord }) {
   const [isPlaying, setIsPlaying] = useState(false);
 
   return (
-    <>
+    <QueryClientProvider client={new QueryClient()}>
       <TodayRecordCard
         record={record}
         audioRef={audioRef}
@@ -35,7 +36,7 @@ function Wrapper({ record }: { record: MusicRecord }) {
         onPlayingChange={setIsPlaying}
       />
       <audio ref={audioRef} onEnded={() => setIsPlaying(false)} hidden />
-    </>
+    </QueryClientProvider>
   );
 }
 
@@ -87,12 +88,19 @@ describe("TodayRecordCard", () => {
     expect(screen.getByText("신나는 하루였네요")).toBeInTheDocument();
   });
 
-  it("shows a placeholder when the AI comment is not ready yet", () => {
+  it("shows a skeleton while the AI comment is being generated", () => {
+    render(<Wrapper record={makeRecord({ memo: "퇴근길에 마음이 풀렸다" })} />);
+    fireEvent.click(screen.getByRole("button", { name: "신나는" }));
+
+    expect(screen.getByRole("status", { name: "AI 코멘트를 만드는 중" })).toBeInTheDocument();
+  });
+
+  it("says there is no memo when the record has none, without a comment box", () => {
     render(<Wrapper record={makeRecord()} />);
     fireEvent.click(screen.getByRole("button", { name: "신나는" }));
-    expect(
-      screen.getByText("AI 코멘트는 아직 준비 중이에요."),
-    ).toBeInTheDocument();
+
+    expect(screen.getByText("남긴 메모가 없어요.")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("closes the reveal layer when the mood tag is tapped again", () => {

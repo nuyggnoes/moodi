@@ -2,6 +2,7 @@
 
 import { useState, type RefObject } from "react";
 import { AlbumArt } from "@/shared/ui/AlbumArt";
+import { AiComment } from "@/features/comment/AiComment";
 import { PlayIcon, PauseIcon } from "@/shared/ui/icons";
 import { MOOD_COLORS, MOOD_OPTIONS } from "@/entities/record/mood";
 import type { MusicRecord } from "@/entities/record/types";
@@ -100,10 +101,12 @@ export function TodayRecordCard({
                 aria-hidden="true"
               />
               <div className="relative z-20 mt-2 flex w-64 flex-col gap-2 rounded-2xl border border-border bg-surface p-3.5">
-                {record.memo && <p className="text-sm text-ink-dim">{record.memo}</p>}
-                <div className="rounded-xl border border-dashed border-border p-2 text-xs text-ink-faint">
-                  {record.ai_comment ?? "AI 코멘트는 아직 준비 중이에요."}
-                </div>
+                {record.memo ? (
+                  <p className="text-sm text-ink-dim">{record.memo}</p>
+                ) : (
+                  <p className="text-xs text-ink-faint">남긴 메모가 없어요.</p>
+                )}
+                <AiComment record={record} />
               </div>
             </>
           )}

@@ -1,6 +1,13 @@
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DayDetail } from "./DayDetail";
 import type { MusicRecord } from "@/entities/record/types";
+
+function render(ui: React.ReactElement) {
+  return rtlRender(
+    <QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>,
+  );
+}
 
 function makeRecord(overrides: Partial<MusicRecord> = {}): MusicRecord {
   return {
@@ -38,11 +45,20 @@ describe("DayDetail", () => {
     expect(screen.getByText("좋았다")).toBeInTheDocument();
   });
 
-  it("shows a placeholder when ai_comment is null", () => {
+  it("shows the AI comment when it exists", () => {
+    render(<DayDetail records={[makeRecord({ memo: "퇴근길에 마음이 풀렸다", ai_comment: "마음이 풀리던 퇴근길이에요" })]} />);
+    expect(screen.getByText("마음이 풀리던 퇴근길이에요")).toBeInTheDocument();
+  });
+
+  it("shows no comment box for a record without a memo", () => {
     render(<DayDetail records={[makeRecord()]} />);
-    expect(
-      screen.getByText("AI 코멘트는 아직 준비 중이에요."),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/코멘트/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("offers to fetch a comment for an older record that has a memo but no comment", () => {
+    render(<DayDetail records={[makeRecord({ memo: "퇴근길에 마음이 풀렸다" })]} />);
+    expect(screen.getByRole("button", { name: "코멘트 받기" })).toBeInTheDocument();
   });
 
   it("renders multiple records for the same day", () => {

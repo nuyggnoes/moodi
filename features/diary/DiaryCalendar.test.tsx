@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DiaryCalendar } from "./DiaryCalendar";
 import { useMonthRecords } from "./useMonthRecords";
 import type { MusicRecord } from "@/entities/record/types";
@@ -8,6 +9,13 @@ jest.mock("./useMonthRecords", () => ({
 }));
 
 const mockedUseMonthRecords = useMonthRecords as jest.Mock;
+
+// DayDetail 안의 AiComment 가 react-query 훅을 쓰므로 프로바이더로 감싼다.
+function render(ui: React.ReactElement) {
+  return rtlRender(
+    <QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>,
+  );
+}
 
 function keyForDay(day: number): string {
   const now = new Date();
