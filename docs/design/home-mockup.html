@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moodi 메인 목업</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: 데스크톱은 상단바 없이 3열 — 좌 사이드바(기본 펼침, 아이콘 레일로 접힘) | 중앙 주간 포스터 캐러셀 | 우 친구 패널(고정).
+     760px 이하(모바일)에서만 상단바 + 드로어.
+     디자인은 앱의 "라벤더 미스트" 다크 토큰을 그대로 쓴다. 단일 다크 테마를 의도적으로 고정. */
+  @property --bleed {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: #baa7e0;
+  }
+  :root {
+    --bg: #232030;
+    --surface: #2d2839;
+    --surface-hover: #352f43;
+    --border: #3d364c;
+    --ink: #efeaf7;
+    --ink-dim: #a89fc0;
+    --ink-faint: #6e6580;
+    --accent: #baa7e0;
+    --bleed: #baa7e0;
+    --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --topbar: 0px;
+    --rail: 72px;
+    --sidebar: 248px;
+    --friends: 320px;
+    color-scheme: dark;
+    transition: --bleed 0.7s ease;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; padding: 0; }
+  a { color: inherit; text-decoration: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+  /* 포스터 색이 배경으로 번지는 레이어 */
+  .bleed {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(60% 55% at 50% 58%, color-mix(in srgb, var(--bleed) 30%, transparent), transparent 70%),
+      radial-gradient(40% 40% at 50% 100%, color-mix(in srgb, var(--bleed) 14%, transparent), transparent 70%);
+  }
+
+  /* ---------- 상단바 ---------- */
+  .topbar {
+    position: fixed; inset: 0 0 auto 0; height: var(--topbar); z-index: 40;
+    display: none; grid-template-columns: 1fr auto 1fr; align-items: center;
+    padding: 0 16px;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar .left { justify-self: start; }
+  .topbar .right { justify-self: end; }
+  .icon-btn {
+    width: 40px; height: 40px; display: grid; place-items: center;
+    border-radius: 999px; color: var(--ink);
+  }
+  .icon-btn:hover { background: var(--surface-hover); }
+  .wordmark { font-weight: 600; font-size: 19px; letter-spacing: -0.02em; }
+  .avatar {
+    border-radius: 999px; display: grid; place-items: center; font-weight: 600;
+    background: linear-gradient(135deg, #baa7e0, #e8a7c4); color: #232030;
+  }
+
+  /* ---------- 3열 셸 ---------- */
+  .shell {
+    position: relative; z-index: 1;
+    height: 100%; padding-top: var(--topbar);
+    display: grid;
+    grid-template-columns: var(--sidebar) minmax(0, 1fr) var(--friends);
+    transition: grid-template-columns 0.25s ease;
+  }
+  .shell.nav-closed { grid-template-columns: var(--rail) minmax(0, 1fr) var(--friends); }
+
+  .sidebar {
+    overflow: hidden; border-right: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
+  }
+  .sidebar-inner { width: var(--sidebar); height: 100%; padding: 20px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .me { display: flex; align-items: center; gap: 12px; padding: 4px 8px 16px; }
+  .me b { font-weight: 600; display: block; }
+  .me span { color: var(--ink-faint); font-size: 12px; }
+  .nav { display: flex; flex-direction: column; gap: 2px; padding-top: 12px; border-top: 1px solid var(--border); flex: 1; }
+  .nav a, .logout {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 10px; color: var(--ink-dim); width: 100%; text-align: left;
+  }
+  .nav a:hover, .logout:hover { background: var(--surface-hover); color: var(--ink); }
+  .nav a[aria-current="page"] { background: var(--surface-hover); color: var(--ink); font-weight: 500; }
+  .nav svg, .logout svg { flex: none; }
+  .logout { border-top: 1px solid var(--border); border-radius: 0 0 10px 10px; padding-top: 14px; margin-top: 8px; }
+
+  /* ---------- 중앙 ---------- */
+  .main { min-width: 0; height: 100%; overflow: hidden; display: flex; flex-direction: column; align-items: center; padding: 28px 24px 96px; }
+  .head { text-align: center; }
+  .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; color: var(--ink-dim); text-transform: uppercase; }
+  .head h1 { margin: 6px 0 0; font-size: clamp(22px, 2.4vw, 30px); font-weight: 600; letter-spacing: -0.02em; text-wrap: balance; }
+
+  .stage {
+    position: relative; width: 100%; max-width: 980px; flex: 1; min-height: 420px; max-height: 520px;
+    margin-top: 8px; perspective: 1500px; touch-action: pan-y; cursor: grab;
+    -webkit-user-select: none; user-select: none;
+  }
+  .stage.dragging { cursor: grabbing; }
+  .poster {
+    position: absolute; left: 50%; top: 50%; width: 280px; height: 392px;
+    margin: -196px 0 0 -140px;
+    border-radius: 22px; padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: 0 24px 60px rgba(8, 6, 16, 0.55);
+    display: flex; flex-direction: column; gap: 12px;
+    transition: transform 0.55s cubic-bezier(.2,.8,.2,1), opacity 0.4s ease, box-shadow 0.4s ease;
+    will-change: transform;
+    text-align: left;
+  }
+  .poster.is-center { box-shadow: 0 30px 80px rgba(8, 6, 16, 0.65), 0 0 0 1px color-mix(in srgb, var(--pc) 55%, transparent), 0 0 60px color-mix(in srgb, var(--pc) 28%, transparent); }
+  .p-top { display: flex; justify-content: space-between; align-items: baseline; padding: 0 2px; }
+  .p-date { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.04em; }
+  .p-day { font-size: 12px; color: var(--ink-dim); }
+  .art {
+    position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden;
+    background: linear-gradient(145deg, var(--a), var(--b));
+  }
+  .art::before { content: ""; position: absolute; inset: 0; background: var(--shape); mix-blend-mode: soft-light; opacity: 0.9; }
+  .art::after { content: attr(data-init); position: absolute; left: 12px; bottom: 6px; font-size: 64px; font-weight: 700; letter-spacing: -0.04em; color: rgb(255 255 255 / 0.28); line-height: 1; }
+  .play {
+    position: absolute; right: 10px; bottom: 10px; width: 40px; height: 40px; border-radius: 999px;
+    display: grid; place-items: center; background: rgb(20 16 30 / 0.62); backdrop-filter: blur(6px); z-index: 2;
+  }
+  .play:hover { background: rgb(20 16 30 / 0.82); }
+  .p-meta { padding: 0 2px; min-width: 0; }
+  .p-track { font-weight: 600; font-size: 16px; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .p-artist { color: var(--ink-dim); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .poster.empty { background: transparent; border: 1.5px dashed var(--border); box-shadow: none; justify-content: center; align-items: center; text-align: center; color: var(--ink-faint); gap: 6px; }
+  .poster.empty .p-top { position: absolute; top: 14px; left: 16px; right: 16px; }
+  .poster.empty strong { color: var(--ink-dim); font-weight: 500; }
+  .poster.cta { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border: 1.5px dashed color-mix(in srgb, var(--accent) 60%, transparent); box-shadow: none; justify-content: center; align-items: center; text-align: center; gap: 14px; }
+  .poster.cta .p-top { position: absolute; top: 14px; left: 16px; right: 16px; }
+  .poster.cta p { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; max-width: 190px; text-wrap: balance; }
+  .poster.cta { cursor: pointer; }
+  .poster.cta .plus { width: 64px; height: 64px; border-radius: 999px; display: grid; place-items: center; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); border: 1.5px solid color-mix(in srgb, var(--accent) 55%, transparent); transition: transform 0.2s ease, background 0.2s ease; }
+  .poster.cta.is-center:hover .plus { transform: scale(1.08); background: color-mix(in srgb, var(--accent) 24%, transparent); }
+  .poster.cta p { max-width: 210px; }
+  .poster.empty { cursor: default; }
+  .d-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .d-edit { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-dim); font-size: 12px; white-space: nowrap; }
+  .d-edit:hover { background: var(--surface-hover); color: var(--ink); }
+  .toast { position: fixed; left: 50%; bottom: 76px; transform: translate(-50%, 8px); opacity: 0; pointer-events: none; z-index: 70; padding: 9px 16px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 13px; font-weight: 500; transition: opacity 0.2s ease, transform 0.2s ease; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .btn-primary { background: var(--accent); color: var(--bg); font-weight: 600; padding: 11px 24px; border-radius: 999px; }
+  .btn-primary:hover { filter: brightness(1.08); }
+
+  .nav-arrow {
+    position: absolute; top: 50%; margin-top: -22px; width: 44px; height: 44px; z-index: 30;
+    border-radius: 999px; display: grid; place-items: center;
+    background: color-mix(in srgb, var(--surface) 80%, transparent); border: 1px solid var(--border);
+  }
+  .nav-arrow:hover { background: var(--surface-hover); }
+  .nav-arrow[disabled] { opacity: 0.3; cursor: default; }
+  .nav-arrow.prev { left: 4px; }
+  .nav-arrow.next { right: 4px; }
+
+  /* 무드 칩 + 코멘트 */
+  .under { width: 100%; max-width: 440px; display: flex; flex-direction: column; align-items: center; gap: 10px; min-height: 40px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px;
+    background: color-mix(in srgb, var(--pc) 20%, var(--surface)); border: 1px solid color-mix(in srgb, var(--pc) 55%, transparent);
+    font-weight: 500;
+  }
+  .chip i { width: 8px; height: 8px; border-radius: 999px; background: var(--pc); }
+  .chip small { color: var(--ink-dim); font-weight: 400; font-size: 12px; }
+  .comment { margin: 0; text-align: center; color: var(--ink-dim); text-wrap: pretty; }
+  .comment em { font-style: normal; display: block; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--ink-faint); margin-bottom: 4px; }
+  .comment[hidden] { display: none; }
+
+  .days { display: flex; gap: 6px; margin-top: 22px; }
+  .day {
+    min-width: 52px; padding: 6px 4px; border-radius: 12px; display: grid; justify-items: center; gap: 2px;
+    color: var(--ink-faint); border: 1px solid transparent;
+  }
+  .day:hover { background: var(--surface-hover); }
+  .day .w { font-size: 11px; }
+  .day .n { font-family: var(--font-mono); font-size: 13px; color: var(--ink-dim); }
+  .day .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--dc, transparent); border: 1px solid var(--dc, var(--border)); }
+  .day[aria-current="true"] { border-color: var(--border); background: var(--surface); }
+  .day[aria-current="true"] .n { color: var(--ink); }
+
+  /* ---------- 우측 친구 패널 ---------- */
+  .friends {
+    border-left: 1px solid var(--border); padding: 20px 16px; overflow: auto;
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .friends h2 { margin: 0; font-size: 13px; font-weight: 500; color: var(--ink-dim); display: flex; justify-content: space-between; }
+  .friends h2 span { font-family: var(--font-mono); color: var(--ink-faint); }
+  .friend { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 12px; width: 100%; text-align: left; }
+  .friend:hover { background: var(--surface-hover); }
+  .f-av { position: relative; flex: none; }
+  .f-av .avatar { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--fc, transparent); }
+  .friend.quiet { opacity: 0.5; }
+  .friend b { font-weight: 500; display: block; line-height: 1.3; }
+  .friend small { color: var(--ink-faint); font-size: 12px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .friend .f-text { min-width: 0; }
+  .f-empty { margin: auto 0; text-align: center; color: var(--ink-faint); padding: 24px 8px; display: grid; gap: 6px; justify-items: center; }
+  .f-empty b { color: var(--ink-dim); font-weight: 500; }
+  .f-empty .btn-ghost { margin-top: 8px; padding: 9px 18px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-dim); }
+  .f-empty .btn-ghost:hover { background: var(--surface-hover); }
+
+  /* ---------- 목업 컨트롤 ---------- */
+  .controls {
+    position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 60;
+    display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: center;
+    padding: 8px 12px; border-radius: 14px; max-width: calc(100% - 32px);
+    background: rgb(20 16 30 / 0.88); border: 1px solid var(--border); backdrop-filter: blur(10px);
+    font-size: 12px; color: var(--ink-dim);
+  }
+  .controls .group { display: flex; align-items: center; gap: 6px; }
+  .seg { display: inline-flex; background: var(--surface); border-radius: 8px; padding: 2px; }
+  .seg button { padding: 4px 10px; border-radius: 6px; color: var(--ink-dim); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--bg); font-weight: 600; }
+  .tag { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; color: var(--ink-faint); }
+
+  /* ---------- 좁은 화면(데스크톱 우선이므로 간단한 대응만) ---------- */
+  @media (max-width: 1100px) {
+    :root { --friends: 0px; }
+    .friends { display: none; }
+    .under .comment { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; min-height: 6.4em; }
+  }
+  /* 우측 패널: 선택한 날 상세 */
+  .detail { display: flex; flex-direction: column; gap: 14px; padding: 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); }
+  .d-top { display: flex; gap: 12px; align-items: center; min-width: 0; }
+  .art.sm { width: 72px; flex: none; border-radius: 10px; }
+  .art.sm::after { font-size: 30px; left: 6px; bottom: 2px; }
+  .d-meta { min-width: 0; display: grid; gap: 2px; justify-items: start; }
+  .d-track { font-weight: 600; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .d-artist { color: var(--ink-dim); font-size: 13px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip.sm { padding: 3px 10px; font-size: 12px; margin-top: 6px; }
+  .d-block h3 { margin: 0 0 4px; font-family: var(--font-mono); font-size: 11px; font-weight: 400; letter-spacing: 0.06em; color: var(--ink-faint); }
+  .d-block p { margin: 0; text-wrap: pretty; overflow-wrap: anywhere; }
+  .d-block.ai p { color: var(--ink-dim); }
+  .clamp { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; -webkit-line-clamp: 2; }
+  .clamp.c4 { -webkit-line-clamp: 4; }
+  .clamp.open { display: block; -webkit-line-clamp: unset; }
+  .d-more { align-self: flex-start; color: var(--accent); font-size: 12px; padding: 2px 0; }
+  .d-foot { font-size: 12px; color: var(--ink-faint); border-top: 1px solid var(--border); padding-top: 10px; }
+  .d-empty { display: grid; gap: 8px; justify-items: center; text-align: center; padding: 28px 8px; color: var(--ink-faint); border: 1.5px dashed var(--border); border-radius: 16px; }
+  .d-empty b { color: var(--ink-dim); font-weight: 500; }
+  .d-empty .btn-primary { margin-top: 8px; }
+  .friends h2.sub { margin-top: 10px; }
+  @media (min-width: 1101px) { .under .comment { display: none; } }
+
+  /* 사이드바: 머리글(마크 + 접기), 아이콘 레일 */
+  .sidebar-inner { width: 100%; padding: 12px 14px 20px; }
+  .side-head { display: flex; align-items: center; justify-content: space-between; height: 44px; padding-left: 8px; margin-bottom: 8px; }
+  .lbl, .me-text { white-space: nowrap; }
+  .scrim { display: none; position: fixed; inset: 0; z-index: 50; background: rgb(0 0 0 / 0.5); }
+
+  @media (min-width: 761px) {
+    .shell.nav-closed .side-head { justify-content: center; padding-left: 0; }
+    .shell.nav-closed .side-head .wordmark,
+    .shell.nav-closed .me-text,
+    .shell.nav-closed .lbl { display: none; }
+    .shell.nav-closed .me { justify-content: center; padding-left: 0; padding-right: 0; }
+    .shell.nav-closed .nav a,
+    .shell.nav-closed .logout { justify-content: center; padding-left: 0; padding-right: 0; }
+  }
+
+  /* 모바일: 상단바 + 좌측 드로어 */
+  @media (max-width: 760px) {
+    :root { --topbar: 56px; --sidebar: 0px; }
+    .topbar { display: grid; }
+    .shell, .shell.nav-closed { grid-template-columns: 0 minmax(0, 1fr) 0; }
+    .sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0; width: 280px; z-index: 55;
+      background: var(--surface); transform: translateX(-100%); transition: transform 0.25s ease;
+    }
+    .shell.drawer-open .sidebar { transform: none; }
+    .shell.drawer-open + .scrim { display: block; }
+    .main { padding: 20px 8px 120px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+</head>
+<body>
+<div class="bleed" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="left">
+    <button class="icon-btn" id="openDrawer" aria-label="메뉴 열기">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+  </div>
+  <a class="wordmark" href="#" aria-label="Moodi 홈">Moodi</a>
+  <div class="right"><div class="avatar" style="width:34px;height:34px" role="img" aria-label="내 아바타">무</div></div>
+</header>
+
+<div class="shell" id="shell">
+  <aside class="sidebar" aria-label="메뉴">
+    <div class="sidebar-inner">
+      <div class="side-head">
+        <a class="wordmark" href="#" aria-label="Moodi 홈">Moodi</a>
+        <button class="icon-btn" id="toggleNav" aria-label="사이드바 접기/펼치기" aria-expanded="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
+        </button>
+      </div>
+      <div class="me">
+        <div class="avatar" style="width:44px;height:44px;font-size:17px;flex:none" aria-hidden="true">무</div>
+        <div class="me-text"><b>무디</b><span>오늘도 한 곡</span></div>
+      </div>
+      <nav class="nav" aria-label="주요 화면">
+        <a href="#" aria-current="page"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span class="lbl">홈</span></a>
+        <a href="#"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="lbl">기록하기</span></a>
+        <a href="#"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="lbl">다이어리</span></a>
+        <a href="#"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="lbl">검색</span></a>
+      </nav>
+      <button class="logout"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span class="lbl">로그아웃</span></button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="head">
+      <div class="eyebrow" id="eyebrow">최근 7일 · 10.07 – 10.13</div>
+      <h1 id="headline">이번 주, 이런 노래와 함께였어요</h1>
+    </div>
+
+    <section class="stage" id="stage" aria-roledescription="carousel" aria-label="최근 7일의 음악 기록" tabindex="0">
+      <button class="nav-arrow prev" id="prev" aria-label="이전 날"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button class="nav-arrow next" id="next" aria-label="다음 날"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+    </section>
+
+    <div class="under" aria-live="polite">
+      <div class="chip" id="chip"></div>
+      <p class="comment" id="comment"></p>
+    </div>
+
+    <div class="days" id="days" role="tablist" aria-label="날짜 선택"></div>
+  </main>
+
+  <aside class="friends" id="friends" aria-label="친구"></aside>
+</div>
+<div class="scrim" id="scrim"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<div class="controls" role="group" aria-label="목업 컨트롤">
+  <span class="tag">MOCKUP</span>
+  <div class="group">오늘 기록
+    <span class="seg" id="segToday"><button data-v="1" aria-pressed="true">있음</button><button data-v="0" aria-pressed="false">없음</button></span>
+  </div>
+  <div class="group">친구 섹션
+    <span class="seg" id="segFriends"><button data-v="1" aria-pressed="true">있음</button><button data-v="0" aria-pressed="false">없음</button></span>
+  </div>
+  <span class="tag">← → 키 · 드래그 · 칩 탭 = 코멘트 · 창 폭 760px↓ = 모바일</span>
+</div>
+
+<script>
+(function () {
+  var MOODS = {
+    exciting: { label: "설레는", color: "#e8a7c4" },
+    calm: { label: "차분한", color: "#a7b8e8" },
+    energetic: { label: "신나는", color: "#e8b175" },
+    sad: { label: "우울한", color: "#8f9bb8" },
+    focused: { label: "집중되는", color: "#8fc9b0" }
+  };
+  var SHAPES = [
+    "radial-gradient(circle at 70% 25%, #fff 0, transparent 45%)",
+    "repeating-linear-gradient(115deg, rgb(255 255 255 / .35) 0 2px, transparent 2px 22px)",
+    "radial-gradient(circle at 20% 80%, #fff 0, transparent 50%)",
+    "conic-gradient(from 200deg at 60% 40%, rgb(255 255 255 / .5), transparent 40%, rgb(255 255 255 / .25) 70%, transparent)",
+    "repeating-radial-gradient(circle at 80% 20%, rgb(255 255 255 / .3) 0 2px, transparent 2px 18px)"
+  ];
+  /* 예시 데이터: 오늘 = 10.13(화). 최근 7일 */
+  var DAYS = [
+    { date: "10.07", wd: "수", rec: { track: "Ditto", artist: "NewJeans", mood: "exciting", a: "#f4b6d2", b: "#7d86e0", s: 0, memo: "새 계절 첫 출근길", ai: "설렘이 걸음 속도에 그대로 묻어나는 하루였네요." } },
+    { date: "10.08", wd: "목", rec: { track: "Weightless", artist: "Marconi Union", mood: "calm", a: "#9fb4ea", b: "#3d4a78", s: 4, memo: "야근 끝, 조용히", ai: "복잡했던 머릿속이 천천히 가라앉는 밤이었어요." } },
+    { date: "10.09", wd: "금", rec: { track: "Next Level", artist: "aespa", mood: "energetic", a: "#f2c185", b: "#d4577a", s: 1, memo: "금요일이다!! 퇴근하자마자 이어폰 끼고 한강까지 걸었는데, 이 노래 첫 소절이 나오는 순간 일주일 쌓인 피로가 싹 날아가는 느낌이었음. 오늘만큼은 아무 생각 없이 크게 틀고 싶었다.", ai: "한 주의 끝에서 에너지가 한꺼번에 터졌네요. 걷는 속도와 박자가 맞아떨어지던 순간, 피로가 가벼운 해방감으로 바뀐 하루였어요. 금요일 저녁 특유의 들뜬 공기가 노래에 그대로 담겨 있었습니다." } },
+    { date: "10.10", wd: "토", rec: null },
+    { date: "10.11", wd: "일", rec: { track: "Mad World", artist: "Gary Jules", mood: "sad", a: "#9aa6c4", b: "#454d6b", s: 2, memo: "비 오는 일요일", ai: "차분히 가라앉는 마음을 그대로 들여다본 하루예요." } },
+    { date: "10.12", wd: "월", rec: { track: "Strobe", artist: "deadmau5", mood: "focused", a: "#9bd6bd", b: "#2f6b66", s: 3, memo: "마감 전 몰입", ai: "한 곡이 끝날 때까지 흐트러지지 않은 집중이었어요." } },
+    { date: "10.13", wd: "화", today: true, rec: { track: "Love wins all", artist: "IU", mood: "exciting", a: "#f0b8cf", b: "#8d6fc7", s: 0, memo: "오늘은 왠지 마음이 말랑해", ai: "말랑해진 마음이 노래의 결과 잘 맞닿아 있어요." } }
+  ];
+
+  var state = { idx: DAYS.length - 1, hasToday: true, hasFriends: true, open: false, navOpen: true };
+
+  var stage = document.getElementById("stage");
+  var chip = document.getElementById("chip");
+  var comment = document.getElementById("comment");
+  var daysEl = document.getElementById("days");
+  var root = document.documentElement;
+
+  function rec(i) {
+    var d = DAYS[i];
+    if (d.today && !state.hasToday) return null;
+    return d.rec;
+  }
+
+  function posterHTML(d, i) {
+    var r = rec(i);
+    var top = '<div class="p-top"><span class="p-date">' + d.date + '</span><span class="p-day">' + d.wd + '요일' + (d.today ? ' · 오늘' : '') + '</span></div>';
+    if (!r && d.today) {
+      return '<a class="poster cta" href="#" data-i="' + i + '" data-go="/record" aria-label="오늘 기록하기">' + top + '<p>나의 오늘 감정을 노래와 함께 기록</p><span class="plus" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span></a>';
+    }
+    if (!r) {
+      return '<div class="poster empty" data-i="' + i + '">' + top + '<strong>기록 없는 날</strong><span>조용히 지나간 하루</span></div>';
+    }
+    var m = MOODS[r.mood];
+    return '<div class="poster" data-i="' + i + '" style="--pc:' + m.color + '">' + top +
+      '<div class="art" data-init="' + r.track.charAt(0) + '" style="--a:' + r.a + ';--b:' + r.b + ';--shape:' + SHAPES[r.s] + '">' +
+      '<button class="play" aria-label="' + r.track + ' 미리듣기"><svg width="14" height="14" viewBox="0 0 12 12" fill="#fff" aria-hidden="true"><path d="M2 1.2v9.6c0 .7.8 1.1 1.4.7l7.2-4.8c.5-.4.5-1.1 0-1.4L3.4.5C2.8.1 2 .5 2 1.2Z"/></svg></button></div>' +
+      '<div class="p-meta"><div class="p-track">' + r.track + '</div><div class="p-artist">' + r.artist + '</div></div></div>';
+  }
+
+  function build() {
+    stage.querySelectorAll(".poster").forEach(function (n) { n.remove(); });
+    var html = DAYS.map(posterHTML).join("");
+    stage.insertAdjacentHTML("afterbegin", html);
+    daysEl.innerHTML = DAYS.map(function (d, i) {
+      var r = rec(i);
+      var c = r ? MOODS[r.mood].color : "";
+      return '<button class="day" role="tab" data-i="' + i + '" style="--dc:' + c + '"><span class="w">' + d.wd + '</span><span class="n">' + d.date.slice(3) + '</span><span class="dot"></span></button>';
+    }).join("");
+  }
+
+  function layout() {
+    var w = stage.clientWidth;
+    var gap = Math.max(150, Math.min(250, w / 4.2));
+    stage.querySelectorAll(".poster").forEach(function (p) {
+      var i = +p.dataset.i, off = i - state.idx, a = Math.abs(off);
+      var rot = Math.max(-1, Math.min(1, off)) * -34 * Math.min(a, 1);
+      var x = off === 0 ? 0 : Math.sign(off) * (gap * 1.05 + (a - 1) * gap * 0.62);
+      var sc = off === 0 ? 1 : Math.max(0.6, 0.84 - (a - 1) * 0.07);
+      var z = off === 0 ? 0 : -120 - (a - 1) * 60;
+      p.style.transform = "translateX(" + x + "px) translateZ(" + z + "px) rotateY(" + rot + "deg) scale(" + sc + ")";
+      p.style.zIndex = 20 - a;
+      p.style.opacity = a > 3 ? 0 : (off === 0 ? 1 : 0.88 - (a - 1) * 0.2);
+      p.style.pointerEvents = a > 3 ? "none" : "auto";
+      p.classList.toggle("is-center", off === 0);
+      p.setAttribute("aria-hidden", off === 0 ? "false" : "true");
+    });
+    document.getElementById("prev").disabled = state.idx === 0;
+    document.getElementById("next").disabled = state.idx === DAYS.length - 1;
+    daysEl.querySelectorAll(".day").forEach(function (b) {
+      b.setAttribute("aria-current", +b.dataset.i === state.idx ? "true" : "false");
+      b.setAttribute("aria-selected", +b.dataset.i === state.idx ? "true" : "false");
+    });
+    renderUnder();
+  }
+
+  function renderUnder() {
+    renderPanel();
+    var d = DAYS[state.idx], r = rec(state.idx);
+    var bleed = r ? MOODS[r.mood].color : "#baa7e0";
+    root.style.setProperty("--bleed", bleed);
+    if (r) {
+      var m = MOODS[r.mood];
+      chip.style.visibility = "visible";
+      chip.style.setProperty("--pc", m.color);
+      chip.innerHTML = '<i></i>' + m.label + ' <small>' + d.date + ' ' + d.wd + '</small>';
+      comment.innerHTML = '<em>MEMO · AI</em>“' + r.memo + '”<br>' + r.ai;
+    } else {
+      chip.style.visibility = "hidden";
+      comment.innerHTML = "";
+    }
+    var h = document.getElementById("headline");
+    h.textContent = (!state.hasToday && state.idx === DAYS.length - 1)
+      ? "오늘은 어떤 노래가 어울리나요?"
+      : "이번 주, 이런 노래와 함께였어요";
+  }
+
+  function go(i) {
+    i = Math.max(0, Math.min(DAYS.length - 1, i));
+    if (i !== state.idx) { state.idx = i; state.open = false; layout(); }
+  }
+
+  /* 입력: 버튼 / 키보드 / 날짜 / 포스터 클릭 / 드래그 */
+  document.getElementById("prev").onclick = function () { go(state.idx - 1); };
+  document.getElementById("next").onclick = function () { go(state.idx + 1); };
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowLeft") go(state.idx - 1);
+    if (e.key === "ArrowRight") go(state.idx + 1);
+  });
+  daysEl.addEventListener("click", function (e) {
+    var b = e.target.closest(".day"); if (b) go(+b.dataset.i);
+  });
+  document.getElementById("friends").addEventListener("click", function (e) {
+    if (e.target.closest("[data-exp]")) { state.open = !state.open; renderPanel(); }
+  });
+
+  var startX = null, moved = false;
+  stage.addEventListener("pointerdown", function (e) {
+    if (e.target.closest(".nav-arrow")) return;
+    startX = e.clientX; moved = false; stage.classList.add("dragging");
+  });
+  window.addEventListener("pointermove", function (e) {
+    if (startX !== null && Math.abs(e.clientX - startX) > 6) moved = true;
+  });
+  window.addEventListener("pointerup", function (e) {
+    if (startX === null) return;
+    var dx = e.clientX - startX; startX = null; stage.classList.remove("dragging");
+    if (Math.abs(dx) > 50) go(state.idx + (dx < 0 ? 1 : -1));
+  });
+  var toastEl = document.getElementById("toast"), toastT;
+  function goTo(path) {
+    toastEl.textContent = "→ " + path + " 로 이동 (목업)";
+    toastEl.classList.add("show");
+    clearTimeout(toastT);
+    toastT = setTimeout(function () { toastEl.classList.remove("show"); }, 1800);
+  }
+  document.addEventListener("click", function (e) {
+    var g = e.target.closest("[data-go]");
+    if (!g) return;
+    e.preventDefault();
+    var poster = g.closest(".poster");
+    if (poster && +poster.dataset.i !== state.idx) return; /* 옆 포스터는 중앙으로 가져오기만 */
+    if (moved) return;
+    goTo(g.dataset.go);
+  });
+  stage.addEventListener("click", function (e) {
+    if (moved) return;
+    var p = e.target.closest(".poster");
+    if (p && +p.dataset.i !== state.idx) go(+p.dataset.i);
+  });
+  stage.addEventListener("click", function (e) {
+    var pl = e.target.closest(".play");
+    if (pl) { pl.dataset.on = pl.dataset.on === "1" ? "0" : "1";
+      pl.innerHTML = pl.dataset.on === "1"
+        ? '<svg width="14" height="14" viewBox="0 0 12 12" fill="#fff" aria-hidden="true"><rect x="2" y="1" width="3" height="10" rx=".8"/><rect x="7" y="1" width="3" height="10" rx=".8"/></svg>'
+        : '<svg width="14" height="14" viewBox="0 0 12 12" fill="#fff" aria-hidden="true"><path d="M2 1.2v9.6c0 .7.8 1.1 1.4.7l7.2-4.8c.5-.4.5-1.1 0-1.4L3.4.5C2.8.1 2 .5 2 1.2Z"/></svg>';
+    }
+  });
+
+  /* 사이드바: 데스크톱은 접기(레일), 모바일은 드로어 */
+  var shell = document.getElementById("shell"), tn = document.getElementById("toggleNav");
+  var mq = window.matchMedia("(max-width: 760px)");
+  function closeDrawer() { shell.classList.remove("drawer-open"); }
+  tn.onclick = function () {
+    if (mq.matches) { closeDrawer(); return; }
+    state.navOpen = !state.navOpen;
+    shell.classList.toggle("nav-closed", !state.navOpen);
+    tn.setAttribute("aria-expanded", String(state.navOpen));
+    setTimeout(layout, 280);
+  };
+  /* 1100px 이하(데스크톱 범위)에서는 사이드바를 자동으로 레일로 접는다. 그 안에서도 수동 토글은 가능. */
+  var mqNarrow = window.matchMedia("(max-width: 1100px)");
+  function applyAuto() {
+    if (mq.matches) return;
+    state.navOpen = !mqNarrow.matches;
+    shell.classList.toggle("nav-closed", !state.navOpen);
+    tn.setAttribute("aria-expanded", String(state.navOpen));
+    setTimeout(layout, 280);
+  }
+  mqNarrow.addEventListener("change", applyAuto);
+  mq.addEventListener("change", applyAuto);
+  applyAuto();
+  document.getElementById("openDrawer").onclick = function () { shell.classList.add("drawer-open"); };
+  document.getElementById("scrim").onclick = closeDrawer;
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeDrawer(); });
+  document.querySelector(".nav").addEventListener("click", function () { if (mq.matches) closeDrawer(); });
+
+  /* 친구 패널 */
+  var FRIENDS = [
+    { n: "하늘", i: "하", mood: "energetic", t: "Super Shy" },
+    { n: "서윤", i: "서", mood: "calm", t: "Lemon Tree" },
+    { n: "도현", i: "도", mood: null },
+    { n: "민재", i: "민", mood: "focused", t: "Time" },
+    { n: "지우", i: "지", mood: null }
+  ];
+  var TIMES = ["오전 8:40", "오후 11:20", "오후 6:05", null, "오후 3:30", "오전 9:12", "오후 1:25"];
+  var SRC = ["ai", "user", "user", null, "ai", "user", "ai"];
+
+  function renderPanel() {
+    var el = document.getElementById("friends");
+    var d = DAYS[state.idx], r = rec(state.idx);
+    var html = '<h2>선택한 날 <span>' + d.date + ' ' + d.wd + (d.today ? ' · 오늘' : '') + '</span></h2>';
+    if (r) {
+      var m = MOODS[r.mood];
+      var o = state.open ? " open" : "";
+      html += '<article class="detail" style="--pc:' + m.color + '">' +
+        '<div class="d-top"><div class="art sm" data-init="' + r.track.charAt(0) + '" style="--a:' + r.a + ';--b:' + r.b + ';--shape:' + SHAPES[r.s] + '"></div>' +
+        '<div class="d-meta"><div class="d-track">' + r.track + '</div><div class="d-artist">' + r.artist + '</div>' +
+        '<span class="chip sm"><i></i>' + m.label + '</span></div></div>' +
+        '<section class="d-block"><h3>MEMO</h3><p class="clamp' + o + '">' + r.memo + '</p></section>' +
+        '<section class="d-block ai"><h3>AI 코멘트</h3><p class="clamp c4' + o + '">' + r.ai + '</p></section>' +
+        '<button class="d-more" data-exp hidden>' + (state.open ? '접기' : '전체 보기') + '</button>' +
+        '<div class="d-foot"><span>' + TIMES[state.idx] + ' 기록 · ' + (SRC[state.idx] === "ai" ? 'AI 제안을 선택했어요' : '직접 골랐어요') + '</span>' +
+        (d.today ? '<button class="d-edit" data-go="/record?edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>수정</button>' : '') + '</div></article>';
+    } else if (d.today) {
+      html += '<div class="d-empty"><b>오늘의 기록이 아직 없어요</b><span>지금 기분에 맞는 노래를 남겨보세요.</span><button class="btn-primary" data-go="/record">기록하기</button></div>';
+    } else {
+      html += '<div class="d-empty"><b>기록 없는 날</b><span>조용히 지나간 하루예요.</span></div>';
+    }
+    if (state.hasFriends) {
+      var done = FRIENDS.filter(function (f) { return f.mood; }).length;
+      html += '<h2 class="sub">친구 <span>오늘 ' + done + '/' + FRIENDS.length + '</span></h2>' + FRIENDS.map(function (f) {
+        var c = f.mood ? MOODS[f.mood].color : "";
+        return '<button class="friend' + (f.mood ? "" : " quiet") + '"><span class="f-av"><span class="avatar" style="width:40px;height:40px;--fc:' + c + ';background:linear-gradient(135deg,#8f9bb8,#baa7e0)">' + f.i + '</span></span>' +
+          '<span class="f-text"><b>' + f.n + '</b><small>' + (f.mood ? MOODS[f.mood].label + ' · ' + f.t : '아직 조용해요') + '</small></span></button>';
+      }).join("");
+    }
+    el.innerHTML = html;
+    var more = el.querySelector(".d-more");
+    if (more) {
+      var need = state.open || Array.prototype.some.call(el.querySelectorAll(".clamp"), function (c) { return c.scrollHeight > c.clientHeight + 1; });
+      more.hidden = !need;
+    }
+  }
+
+  /* 목업 컨트롤 */
+  function seg(id, key) {
+    var s = document.getElementById(id);
+    s.addEventListener("click", function (e) {
+      var b = e.target.closest("button"); if (!b) return;
+      state[key] = b.dataset.v === "1";
+      s.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      state.open = false;
+      build(); layout();
+    });
+  }
+  seg("segToday", "hasToday");
+  seg("segFriends", "hasFriends");
+
+  window.addEventListener("resize", layout);
+  build(); layout();
+})();
+</script>
+
+</body>
+</html>
