@@ -1,4 +1,9 @@
-import { isApiPath, requiresAuth, requiresProfile } from "./protected-paths";
+import {
+  hidesNav,
+  isApiPath,
+  requiresAuth,
+  requiresProfile,
+} from "./protected-paths";
 
 describe("requiresAuth", () => {
   it.each([
@@ -48,5 +53,20 @@ describe("isApiPath", () => {
     ["/", false],
   ])("%s -> %s", (path, expected) => {
     expect(isApiPath(path)).toBe(expected);
+  });
+});
+
+describe("hidesNav", () => {
+  it.each([
+    ["/login", true],
+    ["/signup", true],
+    ["/profile/setup", true],
+    ["/", false],
+    ["/record", false],
+    ["/diary", false],
+    ["/search", false],
+    ["/profile/abc", false],
+  ])("%s -> %s", (path, expected) => {
+    expect(hidesNav(path)).toBe(expected);
   });
 });

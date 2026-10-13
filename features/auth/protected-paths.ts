@@ -31,3 +31,8 @@ export function requiresProfile(pathname: string): boolean {
     !isApiPath(pathname)
   );
 }
+
+/** 전역 네비게이션 바를 숨기는 경로: 공개 경로와 프로필 설정(아직 앱 안으로 들어오기 전). */
+export function hidesNav(pathname: string): boolean {
+  return !requiresAuth(pathname) || matches(pathname, PROFILE_OPTIONAL_PATHS);
+}
