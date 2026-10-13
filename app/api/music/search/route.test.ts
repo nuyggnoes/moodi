@@ -1,19 +1,46 @@
 /** @jest-environment node */
 import { NextRequest } from "next/server";
 import { GET } from "./route";
+import { createClient } from "@/shared/lib/supabase/server";
 import { itunesProvider } from "@/shared/lib/music/itunes";
 
+jest.mock("@/shared/lib/supabase/server", () => ({ createClient: jest.fn() }));
 jest.mock("@/shared/lib/music/itunes", () => ({
   itunesProvider: { search: jest.fn() },
 }));
 
+const mockedCreateClient = createClient as jest.Mock;
 const mockedSearch = itunesProvider.search as jest.Mock;
+
+function mockUser(user: { id: string } | null) {
+  mockedCreateClient.mockResolvedValue({
+    auth: { getUser: async () => ({ data: { user } }) },
+  });
+}
+
+beforeEach(() => {
+  mockUser({ id: "user-1" });
+});
 
 afterEach(() => {
   mockedSearch.mockReset();
 });
 
 describe("GET /api/music/search", () => {
+  it("returns 401 without calling the provider when not logged in", async () => {
+    mockUser(null);
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/music/search?q=aespa",
+    );
+    const response = await GET(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.error).toBe("unauthorized");
+    expect(mockedSearch).not.toHaveBeenCalled();
+  });
+
   it("returns results for a query", async () => {
     mockedSearch.mockResolvedValue([
       {

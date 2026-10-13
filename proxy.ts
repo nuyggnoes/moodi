@@ -1,7 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/shared/lib/supabase/database.types";
-import { requiresAuth, requiresProfile } from "@/features/auth/protected-paths";
+import {
+  isApiPath,
+  requiresAuth,
+  requiresProfile,
+} from "@/features/auth/protected-paths";
 
 /**
  * 세션 쿠키 갱신 + 보호 라우트 접근 제어.
@@ -40,6 +44,10 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (requiresAuth(pathname) && !user) {
+    // Route Handler 호출은 리다이렉트 대신 401 — 클라이언트 fetch 가 로그인 HTML 을 받지 않게 한다.
+    if (isApiPath(pathname)) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
