@@ -7,7 +7,7 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(request: NextRequest) {
-  // proxy.ts 는 /api 경로를 보호하지 않는다 — LLM 비용이 드는 엔드포인트라 여기서 직접 확인한다.
+  // proxy.ts 도 /api 를 막지만, LLM 비용이 드는 엔드포인트라 최종 권한 확인은 여기서 한 번 더 한다.
   const supabase = await createClient();
   const {
     data: { user },

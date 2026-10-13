@@ -1,4 +1,4 @@
-import { requiresAuth, requiresProfile } from "./protected-paths";
+import { isApiPath, requiresAuth, requiresProfile } from "./protected-paths";
 
 describe("requiresAuth", () => {
   it.each([
@@ -7,11 +7,15 @@ describe("requiresAuth", () => {
     ["/diary", true],
     ["/diary/2026-09-14", true],
     ["/profile/setup", true],
+    ["/profile/abc", true],
+    ["/search", true],
     ["/", true],
+    ["/api/music/search", true],
+    ["/anything-new", true],
+    ["/logins", true],
     ["/login", false],
+    ["/login/extra", false],
     ["/signup", false],
-    ["/search", false],
-    ["/records", false],
   ])("%s -> %s", (path, expected) => {
     expect(requiresAuth(path)).toBe(expected);
   });
@@ -21,10 +25,28 @@ describe("requiresProfile", () => {
   it.each([
     ["/record", true],
     ["/diary", true],
+    ["/search", true],
+    ["/profile/abc", true],
     ["/", true],
+    ["/anything-new", true],
     ["/profile/setup", false],
     ["/login", false],
+    ["/signup", false],
+    ["/api/music/search", false],
   ])("%s -> %s", (path, expected) => {
     expect(requiresProfile(path)).toBe(expected);
+  });
+});
+
+describe("isApiPath", () => {
+  it.each([
+    ["/api", true],
+    ["/api/music/search", true],
+    ["/api/ai/mood-suggest", true],
+    ["/apiary", false],
+    ["/diary", false],
+    ["/", false],
+  ])("%s -> %s", (path, expected) => {
+    expect(isApiPath(path)).toBe(expected);
   });
 });
