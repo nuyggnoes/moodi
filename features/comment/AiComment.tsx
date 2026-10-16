@@ -30,8 +30,7 @@ export function AiComment({
   const mutation = useMutation({
     mutationFn: () => requestDailyComment(record.id),
     onSuccess: () => {
-      // 오늘 피드, 달력 목록, 최근 7일 모두 새 코멘트를 다시 읽는다.
-      queryClient.invalidateQueries({ queryKey: ["today-feed"] });
+      // 달력 목록과 최근 7일 모두 새 코멘트를 다시 읽는다.
       queryClient.invalidateQueries({ queryKey: ["month-records"] });
       queryClient.invalidateQueries({ queryKey: ["week-records"] });
     },

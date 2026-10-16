@@ -212,6 +212,21 @@ describe("WeekCarousel", () => {
     });
   });
 
+  it("renders extra content between the stage and the date strip", () => {
+    render(
+      <WeekCarousel
+        days={days}
+        selectedIndex={6}
+        onSelect={jest.fn()}
+        belowStage={<p>아래 영역</p>}
+      />,
+    );
+
+    const below = screen.getByText("아래 영역");
+    const strip = screen.getByRole("tablist", { name: "날짜 선택" });
+    expect(below.compareDocumentPosition(strip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   describe("background bleed", () => {
     it("follows the selected poster's mood color", () => {
       const { container, rerender } = setup(0);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/shared/ui/icons";
 import { useElementWidth } from "@/shared/lib/useElementWidth";
 import { MOOD_COLORS } from "@/entities/record/mood";
@@ -15,6 +15,8 @@ type WeekCarouselProps = {
   /** 가운데 포스터의 인덱스. 초기값은 부모가 오늘(마지막 칸)로 정한다. */
   selectedIndex: number;
   onSelect: (index: number) => void;
+  /** 포스터 무대와 날짜 스트립 사이에 끼울 내용 (예: 1100px 이하의 메모·코멘트 영역) */
+  belowStage?: ReactNode;
 };
 
 const DEFAULT_STAGE_WIDTH = 980;
@@ -26,7 +28,7 @@ const DEFAULT_BLEED = "#baa7e0";
  * 이동은 ←/→(캐러셀에 포커스가 있을 때), 이전/다음 버튼, 드래그, 옆 포스터 클릭, 날짜 스트립. 자동 회전은 없다.
  * 선택은 부모가 들고 있다(제어 컴포넌트). 미리듣기는 한 번에 하나만 재생하고, 선택이 바뀌면 멈춘다.
  */
-export function WeekCarousel({ days, selectedIndex, onSelect }: WeekCarouselProps) {
+export function WeekCarousel({ days, selectedIndex, onSelect, belowStage }: WeekCarouselProps) {
   const [stageRef, stageWidth] = useElementWidth(DEFAULT_STAGE_WIDTH);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -177,6 +179,8 @@ export function WeekCarousel({ days, selectedIndex, onSelect }: WeekCarouselProp
           <ChevronRightIcon />
         </button>
       </section>
+
+      {belowStage}
 
       <DateStrip days={days} selectedIndex={selectedIndex} onSelect={select} />
 

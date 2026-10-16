@@ -112,8 +112,7 @@ describe("AiComment", () => {
       resolveResponse({ ok: true, json: async () => ({ comment: "새 코멘트예요" }) });
     });
 
-    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["today-feed"] }));
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["month-records"] });
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["month-records"] }));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["week-records"] });
   });
 
