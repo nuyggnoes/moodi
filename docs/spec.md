@@ -22,6 +22,7 @@ AI가 메모를 분석해 기분 태그를 추천하고, 하루의 기록을 감
   - 곡명, 아티스트, 앨범아트, 30초 미리듣기
   - 기분 태그 선택 (설레는, 차분한, 신나는, 우울한, 집중되는)
   - 한 줄 메모
+- 하루 1기록: 하루의 기준은 KST이고, 같은 날 다시 저장하면 오늘 기록을 대체한다(AI 코멘트도 새로 생성). 지난날 기록은 바꾸지 않는다 (`docs/adr/0007-one-record-per-day.md`)
 - 공개 범위: 전체 공개 고정
 
 ### 3. AI 기분 태그 추천
@@ -66,6 +67,7 @@ AI가 메모를 분석해 기분 태그를 추천하고, 하루의 기록을 감
   - mood, mood_source(`user`|`ai`), memo
   - ai_comment (nullable, 비동기 생성)
   - created_at
+  - record_date (생성 컬럼, `created_at`의 KST 날짜) — `unique (user_id, record_date)`로 하루 1기록 강제
 - `follows` 팔로우 관계 (follower_id, following_id)
 - `likes` 좋아요 (user_id, record_id)
 
