@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { act, render, screen, fireEvent } from "@testing-library/react";
 import { TopBar } from "./TopBar";
 import { useUserProfile } from "@/entities/user/useUserProfile";
 
@@ -40,5 +40,29 @@ describe("TopBar", () => {
     (useUserProfile as jest.Mock).mockReturnValue({ data: undefined });
     render(<TopBar userId="u1" />);
     expect(screen.getByRole("button", { name: "메뉴 열기" })).toBeInTheDocument();
+  });
+
+  it("closes an open drawer when the window grows to desktop width", () => {
+    type Listener = () => void;
+    let desktop = false;
+    const listeners = new Set<Listener>();
+    window.matchMedia = jest.fn().mockImplementation(() => ({
+      get matches() {
+        return desktop;
+      },
+      addEventListener: (_: string, l: Listener) => listeners.add(l),
+      removeEventListener: (_: string, l: Listener) => listeners.delete(l),
+    }));
+
+    render(<TopBar userId="u1" />);
+    fireEvent.click(screen.getByRole("button", { name: "메뉴 열기" }));
+    expect(screen.getByRole("dialog", { name: "메뉴" })).toBeInTheDocument();
+
+    act(() => {
+      desktop = true;
+      listeners.forEach((l) => l());
+    });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
