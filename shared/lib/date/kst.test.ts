@@ -1,4 +1,10 @@
-import { kstDateKey, kstDayRange, kstMonthRange, kstToday } from "./kst";
+import {
+  kstDateKey,
+  kstDayRange,
+  kstMonthRange,
+  kstRecentDaysRange,
+  kstToday,
+} from "./kst";
 
 describe("kstDateKey", () => {
   it("keeps 14:59:59Z on the same KST day and rolls 15:00:00Z to the next", () => {
@@ -64,5 +70,26 @@ describe("kstToday", () => {
       day: 14,
       key: "2026-10-14",
     });
+  });
+});
+
+describe("kstRecentDaysRange", () => {
+  it("covers the last N KST days ending with today (today included)", () => {
+    const { start, end } = kstRecentDaysRange(new Date("2026-10-13T20:00:00Z"), 7);
+
+    expect(start.toISOString()).toBe("2026-10-07T15:00:00.000Z");
+    expect(end.toISOString()).toBe("2026-10-14T15:00:00.000Z");
+    expect(kstDateKey(start)).toBe("2026-10-08");
+    expect(kstDateKey(new Date(end.getTime() - 1))).toBe("2026-10-14");
+  });
+
+  it("is exactly N * 24 hours long", () => {
+    const { start, end } = kstRecentDaysRange(new Date("2026-10-13T00:00:00Z"), 7);
+    expect(end.getTime() - start.getTime()).toBe(7 * 24 * 60 * 60 * 1000);
+  });
+
+  it("crosses month and year boundaries", () => {
+    const { start } = kstRecentDaysRange(new Date("2027-01-02T03:00:00Z"), 7);
+    expect(kstDateKey(start)).toBe("2026-12-27");
   });
 });

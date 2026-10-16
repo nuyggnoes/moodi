@@ -40,6 +40,17 @@ export function kstDayRange(now: Date): { start: Date; end: Date } {
   };
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** 오늘을 포함한 최근 N일(KST)의 [start, end) 범위. */
+export function kstRecentDaysRange(
+  now: Date,
+  days: number,
+): { start: Date; end: Date } {
+  const { end } = kstDayRange(now);
+  return { start: new Date(end.getTime() - days * DAY_MS), end };
+}
+
 /** KST 기준 한 달의 [start, end) 범위. month 는 0부터. */
 export function kstMonthRange(
   year: number,
