@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { getMonthGrid, toDateKey } from "./calendarGrid";
+import { kstDateKey, kstToday } from "@/shared/lib/date/kst";
 import { useMonthRecords } from "./useMonthRecords";
 import { DayDetail } from "./DayDetail";
 import { MOOD_COLORS } from "@/entities/record/mood";
@@ -18,9 +19,9 @@ function goToNextMonth(year: number, month: number): [number, number] {
 }
 
 export function DiaryCalendar({ userId }: { userId: string }) {
-  const today = useMemo(() => new Date(), []);
-  const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth());
+  const today = useMemo(() => kstToday(), []);
+  const [year, setYear] = useState(today.year);
+  const [month, setMonth] = useState(today.month);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   const { data: records } = useMonthRecords(userId, year, month);
@@ -29,7 +30,7 @@ export function DiaryCalendar({ userId }: { userId: string }) {
   const recordsByDay = useMemo(() => {
     const map = new Map<string, MusicRecord[]>();
     for (const record of records ?? []) {
-      const key = toDateKey(new Date(record.created_at));
+      const key = kstDateKey(record.created_at);
       const list = map.get(key) ?? [];
       list.push(record);
       map.set(key, list);

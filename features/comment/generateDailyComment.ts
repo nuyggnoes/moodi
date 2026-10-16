@@ -25,6 +25,7 @@ type Deps = {
  * - 이미 코멘트가 있으면 다시 만들지 않고 그대로 돌려준다.
  * - 메모가 짧거나 없으면 만들지 않는다.
  * - 힘든 감정으로 판별되면 모델 문장 대신 고정 문구를 저장한다.
+ * - 저장은 읽었을 때의 메모와 같은 기록에만 반영한다 (하루 1기록 대체 경쟁 방지).
  */
 export async function generateDailyComment(
   { supabase, generator }: Deps,
@@ -68,7 +69,9 @@ export async function generateDailyComment(
     .from("records")
     .update({ ai_comment: comment })
     .eq("id", recordId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    // 생성 중에 오늘 기록이 대체됐다면(같은 id, 다른 내용) 옛 메모의 코멘트로 덮어쓰지 않는다.
+    .eq("memo", record.memo as string);
 
   if (updateError) {
     return { success: false, error: "upstream", cause: "db_error" };

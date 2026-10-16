@@ -24,6 +24,7 @@ function makeRecord(overrides: Partial<RecordRow> = {}): RecordRow {
     memo: "퇴근길에 비가 와서 마음이 좀 풀렸다",
     ai_comment: null,
     created_at: "2026-10-09T09:00:00Z",
+    record_date: "2026-10-09",
     ...overrides,
   };
 }
@@ -39,7 +40,7 @@ function fakeSupabase(options: {
     const chain = {
       eq: (column: string, value: unknown) => {
         updateEqs.push([column, value]);
-        return updateEqs.length >= 2
+        return updateEqs.length >= 3
           ? Promise.resolve({ error: options.updateError ? { message: "db" } : null })
           : chain;
       },
@@ -97,6 +98,8 @@ describe("generateDailyComment", () => {
     expect(updateEqs).toEqual([
       ["id", RECORD_ID],
       ["user_id", USER_ID],
+      // 생성 중 대체된 기록(메모가 바뀐 같은 id)에는 반영하지 않는다.
+      ["memo", makeRecord().memo],
     ]);
   });
 

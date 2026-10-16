@@ -116,6 +116,7 @@ export type Database = {
           mood: Database["public"]["Enums"]["mood_type"]
           mood_source: string
           preview_url: string | null
+          record_date: string
           track_id: string
           track_name: string
           user_id: string
