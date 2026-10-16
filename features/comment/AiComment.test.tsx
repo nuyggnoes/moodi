@@ -42,6 +42,20 @@ describe("AiComment", () => {
     expect(screen.getByText("비 오는 퇴근길의 하루예요")).toBeInTheDocument();
   });
 
+  it("lets the caller render the ready comment", () => {
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AiComment
+          record={makeRecord({ ai_comment: "맞춤 표시" })}
+          renderReady={(comment) => <p data-testid="custom">{comment}!</p>}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId("custom")).toHaveTextContent("맞춤 표시!");
+  });
+
   it.each([
     ["no memo", null],
     ["a memo shorter than 5 characters", "짧아요"],
@@ -100,6 +114,7 @@ describe("AiComment", () => {
 
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["today-feed"] }));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["month-records"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["week-records"] });
   });
 
   it("shows an error message and the button again when the request fails", async () => {

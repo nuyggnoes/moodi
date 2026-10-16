@@ -22,6 +22,11 @@ export type CommentState = "none" | "ready" | "generating" | "failed";
 
 type CommentFields = Pick<MusicRecord, "memo" | "ai_comment" | "created_at">;
 
+/** 코멘트가 있거나 만들 수 있는 기록인지 (시각과 무관한 판정). false 면 `getCommentState` 는 "none". */
+export function isCommentTarget(record: Pick<MusicRecord, "memo" | "ai_comment">): boolean {
+  return !!record.ai_comment || (record.memo?.trim().length ?? 0) >= COMMENT_MIN_MEMO_LENGTH;
+}
+
 /** 별도 상태 컬럼 없이 메모·코멘트·생성 시각만으로 상태를 파생한다. */
 export function getCommentState(record: CommentFields, now: number): CommentState {
   if (record.ai_comment) return "ready";

@@ -2,6 +2,7 @@ import {
   COMMENT_GENERATING_WINDOW_MS,
   getCommentState,
   hasGeneratingComment,
+  isCommentTarget,
 } from "./comment";
 
 const CREATED = "2026-10-09T09:00:00Z";
@@ -48,5 +49,16 @@ describe("hasGeneratingComment", () => {
     const now = createdMs + COMMENT_GENERATING_WINDOW_MS + 1;
     expect(hasGeneratingComment([rec(), rec({ memo: null })], now)).toBe(false);
     expect(hasGeneratingComment([], now)).toBe(false);
+  });
+});
+
+describe("isCommentTarget", () => {
+  it("is true when a comment exists or the memo is long enough", () => {
+    expect(isCommentTarget({ memo: null, ai_comment: "코멘트예요" })).toBe(true);
+    expect(isCommentTarget({ memo: "퇴근길에 마음이 풀렸다", ai_comment: null })).toBe(true);
+  });
+
+  it.each([null, "    ", "짧아요"])("is false for memo %p without a comment", (memo) => {
+    expect(isCommentTarget({ memo, ai_comment: null })).toBe(false);
   });
 });

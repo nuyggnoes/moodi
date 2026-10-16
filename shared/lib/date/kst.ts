@@ -67,3 +67,12 @@ export function kstToday(now: Date = new Date()) {
   const { year, month, day } = kstParts(now);
   return { year, month, day, key: formatKey(year, month, day) };
 }
+
+/** 시각을 KST 12시간제 "오전 8:40" 형식으로. 기록 시각 표시용. */
+export function formatKstTime(input: Date | string | number): string {
+  const shifted = new Date(new Date(input).getTime() + KST_OFFSET_MS);
+  const hours = shifted.getUTCHours();
+  const minutes = String(shifted.getUTCMinutes()).padStart(2, "0");
+  const period = hours < 12 ? "오전" : "오후";
+  return `${period} ${hours % 12 || 12}:${minutes}`;
+}
