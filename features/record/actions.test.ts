@@ -17,14 +17,14 @@ const mockedCreateClient = createClient as jest.Mock;
 const mockedRedirect = redirect as unknown as jest.Mock;
 const mockedAfter = after as unknown as jest.Mock;
 const mockedGenerate = generateDailyComment as jest.Mock;
-const insert = jest.fn();
+const upsert = jest.fn();
 const single = jest.fn();
 
 function mockClient() {
   return {
     auth: { getUser: async () => ({ data: { user: { id: "user-1" } } }) },
-    // insert(...).select("id").single() 체인
-    from: () => ({ insert: insert.mockReturnValue({ select: () => ({ single }) }) }),
+    // upsert(...).select("id").single() 체인
+    from: () => ({ upsert: upsert.mockReturnValue({ select: () => ({ single }) }) }),
   };
 }
 
@@ -34,7 +34,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  insert.mockReset();
+  upsert.mockReset();
   single.mockReset();
   mockedCreateClient.mockReset();
   mockedRedirect.mockReset();
@@ -61,8 +61,9 @@ describe("saveRecord mood_source", () => {
   it('stores "ai" when the form says the mood came from the AI suggestion', async () => {
     await saveRecord(null, formWith({ moodSource: "ai" }));
 
-    expect(insert).toHaveBeenCalledWith(
+    expect(upsert).toHaveBeenCalledWith(
       expect.objectContaining({ mood: "calm", mood_source: "ai" }),
+      expect.anything(),
     );
     expect(mockedRedirect).toHaveBeenCalledWith("/");
   });
@@ -70,8 +71,9 @@ describe("saveRecord mood_source", () => {
   it('stores "user" for a manual pick', async () => {
     await saveRecord(null, formWith({ moodSource: "user" }));
 
-    expect(insert).toHaveBeenCalledWith(
+    expect(upsert).toHaveBeenCalledWith(
       expect.objectContaining({ mood_source: "user" }),
+      expect.anything(),
     );
   });
 
@@ -81,25 +83,26 @@ describe("saveRecord mood_source", () => {
   ])('falls back to "user" when moodSource is %s', async (_label, extra) => {
     await saveRecord(null, formWith(extra));
 
-    expect(insert).toHaveBeenCalledWith(
+    expect(upsert).toHaveBeenCalledWith(
       expect.objectContaining({ mood_source: "user" }),
+      expect.anything(),
     );
   });
 });
 
 describe("saveRecord validation", () => {
-  it("rejects an invalid mood without inserting", async () => {
+  it("rejects an invalid mood without saving", async () => {
     const result = await saveRecord(null, formWith({ mood: "angry" }));
 
     expect(result).toEqual({ error: "mood_required" });
-    expect(insert).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
   });
 
-  it("rejects a missing track without inserting", async () => {
+  it("rejects a missing track without saving", async () => {
     const result = await saveRecord(null, formWith({ trackName: "" }));
 
     expect(result).toEqual({ error: "track_required" });
-    expect(insert).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
   });
 });
 
@@ -154,5 +157,34 @@ describe("saveRecord AI comment trigger", () => {
       error: "upstream",
       cause: "timeout",
     });
+  });
+});
+
+describe("saveRecord one-record-per-day replacement", () => {
+  it("upserts on (user, KST date), clearing the old comment and refreshing created_at", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-10-16T01:00:00Z"));
+
+    await saveRecord(null, formWith({ moodSource: "user" }));
+
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: "user-1",
+        ai_comment: null,
+        created_at: "2026-10-16T01:00:00.000Z",
+        mood_source: "user",
+      }),
+      { onConflict: "user_id,record_date" },
+    );
+    jest.useRealTimers();
+  });
+
+  it("does not schedule comment generation when the replacement has no memo", async () => {
+    await saveRecord(null, formWith({ memo: "" }));
+
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ memo: null, ai_comment: null }),
+      expect.anything(),
+    );
+    expect(mockedAfter).not.toHaveBeenCalled();
   });
 });

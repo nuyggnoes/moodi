@@ -41,19 +41,28 @@ export async function saveRecord(
     redirect("/login");
   }
 
+  // 하루(KST) 1기록: 같은 날 기록이 있으면 새 행 대신 내용을 대체한다 (docs/adr/0007).
+  // 충돌 대상은 항상 "지금"이 속한 오늘 행뿐이라 지난날 기록은 이 경로로 바뀌지 않는다.
+  // created_at 을 갱신해야 기록 시각과 "코멘트 생성 중" 판정이 이번 저장 기준이 되고,
+  // ai_comment 를 비워야 아래에서 코멘트가 새로 만들어진다.
   const { data: inserted, error } = await supabase
     .from("records")
-    .insert({
-      user_id: user.id,
-      track_id: trackId,
-      track_name: trackName,
-      artist,
-      album_art: albumArt,
-      preview_url: previewUrl,
-      mood,
-      mood_source: moodSource,
-      memo,
-    })
+    .upsert(
+      {
+        user_id: user.id,
+        track_id: trackId,
+        track_name: trackName,
+        artist,
+        album_art: albumArt,
+        preview_url: previewUrl,
+        mood,
+        mood_source: moodSource,
+        memo,
+        ai_comment: null,
+        created_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,record_date" },
+    )
     .select("id")
     .single();
 

@@ -1,5 +1,6 @@
 import { render as rtlRender, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { kstToday } from "@/shared/lib/date/kst";
 import { DiaryCalendar } from "./DiaryCalendar";
 import { useMonthRecords } from "./useMonthRecords";
 import type { MusicRecord } from "@/entities/record/types";
@@ -26,8 +27,9 @@ function keyForDay(day: number): string {
 }
 
 function isoForDay(day: number): string {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), day, 12, 0, 0).toISOString();
+  // 기록은 KST 날짜로 묶이므로 KST 이번 달 해당 일 정오(= 03:00Z)로 만든다.
+  const { year, month } = kstToday();
+  return new Date(Date.UTC(year, month, day, 3, 0, 0)).toISOString();
 }
 
 function makeRecord(overrides: Partial<MusicRecord> = {}): MusicRecord {
@@ -44,6 +46,7 @@ function makeRecord(overrides: Partial<MusicRecord> = {}): MusicRecord {
     memo: null,
     ai_comment: null,
     created_at: isoForDay(1),
+    record_date: "2026-09-14",
     ...overrides,
   };
 }

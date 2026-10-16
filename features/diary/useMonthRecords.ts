@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/shared/lib/supabase/client";
+import { kstMonthRange } from "@/shared/lib/date/kst";
 import {
   COMMENT_POLL_INTERVAL_MS,
   hasGeneratingComment,
@@ -9,8 +10,7 @@ import {
 import type { MusicRecord } from "@/entities/record/types";
 
 export function useMonthRecords(userId: string, year: number, month: number) {
-  const start = new Date(year, month, 1);
-  const end = new Date(year, month + 1, 1);
+  const { start, end } = kstMonthRange(year, month);
 
   return useQuery({
     queryKey: ["month-records", userId, year, month],

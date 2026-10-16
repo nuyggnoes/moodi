@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/shared/lib/supabase/client";
+import { kstDayRange, kstToday } from "@/shared/lib/date/kst";
 import {
   COMMENT_POLL_INTERVAL_MS,
   hasGeneratingComment,
@@ -23,10 +24,7 @@ export type TodayFeed = {
 
 async function fetchTodayFeed(userId: string): Promise<TodayFeed> {
   const supabase = createClient();
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end = new Date(start);
-  end.setDate(start.getDate() + 1);
+  const { start, end } = kstDayRange(new Date());
 
   const [myRecordResult, followResult] = await Promise.all([
     supabase
@@ -81,7 +79,7 @@ async function fetchTodayFeed(userId: string): Promise<TodayFeed> {
 }
 
 export function useTodayFeed(userId: string) {
-  const todayKey = new Date().toDateString();
+  const todayKey = kstToday().key;
 
   return useQuery({
     queryKey: ["today-feed", userId, todayKey],

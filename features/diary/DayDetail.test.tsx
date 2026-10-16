@@ -23,6 +23,7 @@ function makeRecord(overrides: Partial<MusicRecord> = {}): MusicRecord {
     memo: null,
     ai_comment: null,
     created_at: "2026-09-14T00:00:00Z",
+    record_date: "2026-09-14",
     ...overrides,
   };
 }

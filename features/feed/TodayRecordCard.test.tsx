@@ -18,6 +18,7 @@ function makeRecord(overrides: Partial<MusicRecord> = {}): MusicRecord {
     memo: null,
     ai_comment: null,
     created_at: new Date().toISOString(),
+    record_date: "2026-09-14",
     ...overrides,
   };
 }
