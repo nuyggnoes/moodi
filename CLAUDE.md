@@ -6,23 +6,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Moodi** — 기분에 맞는 음악을 기록하면 AI가 무드 태그와 감성 코멘트를 붙여주고, 팔로우한 친구들과 실시간으로 음악 취향을 공유하는 소셜 음악 다이어리.
 
-**Early build phase — Next.js is scaffolded; features are not written yet.** The authoritative specs live under `docs/`; read the relevant one before implementing:
+**Current scope:** the core loop is built and deployed — auth, record (+ AI mood suggestion, editing today's record), diary (+ AI daily comment), music search, and the weekly-poster home (`/`). Not built yet: follow / user search, `/profile/[id]`, realtime feed & likes, Playwright e2e. Specs and decisions live under `docs/`; read the relevant one before implementing:
 
 | File | Contents |
 |---|---|
-| `docs/spec.md` | Full feature spec, DB schema, AI integration design notes |
-| `docs/ci-cd.md` | CI/CD pipeline YAML, branch strategy, branch protection setup |
-| `docs/adr/0001-folder-structure.md` | Why lightweight-FSD instead of full FSD (decision + trade-offs) |
-| `docs/ui-plan.md` | Per-page UX principles and open design decisions |
+| `docs/spec.md` | Full feature spec, implementation status, DB schema, AI integration design notes |
+| `docs/ci-cd.md` | CI/CD pipeline YAML, branch strategy, branch protection, DB migration procedure |
+| `docs/adr/` | Decision records, one per file: 0001 folder structure · 0002 CI/CD deploy · 0003 iTunes · 0004 Supabase · 0005 Gemini · 0006 AI comment policy · 0007 one record per day |
+| `docs/ui-plan.md` | Per-page UX decisions (resolved) and open questions |
+| `docs/design/home-mockup.html` | Interactive mockup of the `/` home (open in a browser) |
 
 When these docs and this file disagree, the docs are newer — reconcile before coding.
 (The 1-month MVP schedule is kept in the author's local notes, not in the repo.)
 
 ## Tech Stack
 
-- **Framework**: Next.js (App Router) + TypeScript
+- **Framework**: Next.js 16 (App Router) + TypeScript
 - **Styling**: Tailwind CSS
-- **State**: Zustand (client state) + TanStack Query (server state / caching)
+- **State**: TanStack Query (server state / caching); everything else is local `useState` / `useActionState` plus one React context (`features/nav/RightPanel`). Zustand is installed but **unused** — no shared client state has been needed yet.
 - **Backend**: Supabase (PostgreSQL, Auth, Realtime, Storage) with Row Level Security
 - **Music**: iTunes Search API (Apple) — no auth/key; called server-side via a Route Handler for caching + rate-limit
 - **AI**: LLM API (currently Gemini Flash-Lite free tier; swappable behind `MoodSuggester`, e.g. Claude Haiku — `docs/adr/0005-llm-provider-gemini.md`) — server-side only, called through Next.js Route Handlers
@@ -40,10 +41,7 @@ npm run test       # unit tests (Jest + Testing Library); CI runs: npm run test 
 npm run test:watch # watch mode (local)
 ```
 
-E2E (added week 2+, Chromium smoke only — login → record → view flow):
-```bash
-npx playwright test --project=chromium
-```
+E2E is **not set up yet**: Playwright is not a dependency and CI has no `e2e` job. Planned: a Chromium smoke test (login → record → view).
 
 ## Environment Variables (`.env.local`)
 
@@ -60,24 +58,29 @@ The iTunes Search API needs no key — nothing to configure for music search.
 ### Page Routes
 | Route | Single purpose |
 |---|---|
-| `/` | Realtime feed of followed users' records |
-| `/record` | Capture today's music + mood fast (2–3 taps); includes AI mood suggestion |
+| `/` | The user's last 7 days as a weekly poster carousel (KST, today selected) with a "selected day" detail panel; today's record can be edited from there |
+| `/record` | Capture today's music + mood fast; includes AI mood suggestion. `?edit=1` opens today's record for editing (saving replaces it) |
 | `/diary` | Personal music calendar, mood-colored, with AI daily comment |
-| `/search` | Music search (iTunes) & user search (by nickname) |
-| `/profile/[id]` | Public user profile — their record history |
+| `/search` | Music search (iTunes). User search by nickname is not built |
+| `/login`, `/signup` | Public auth pages — the only public routes |
+| `/profile/setup` | First-login nickname + avatar setup |
+| `/profile/[id]` | Public user profile — **not built yet** |
 
 ### Database Schema (Supabase PostgreSQL)
 ```
 users     — id (UUID), nickname, avatar_url
 records   — id, user_id (→users), track_id, track_name, artist, album_art, preview_url,
             mood, mood_source ('user' | 'ai'), memo,
-            ai_comment (nullable — filled asynchronously after insert),
-            created_at
+            ai_comment (nullable — filled asynchronously after save),
+            created_at,
+            record_date (generated: created_at as a KST date) — unique (user_id, record_date)
 follows   — follower_id (→users), following_id (→users)   # one-directional
 likes     — user_id (→users), record_id (→records)
 ```
 
 `mood` enum: `exciting | calm | energetic | sad | focused` (설레는 | 차분한 | 신나는 | 우울한 | 집중되는)
+
+**One record per user per KST day** (`docs/adr/0007-one-record-per-day.md`): saving again the same day replaces today's row (refreshes `created_at`, clears and regenerates `ai_comment`); past days are never replaced. Day boundaries always come from `shared/lib/date/kst.ts` — never the browser's local time zone.
 
 RLS: records are publicly readable; all writes restricted to the authenticated owner.
 
@@ -90,9 +93,9 @@ Two LLM endpoints, deliberately split by sync vs async so the AI never blocks th
   - Result shows as an editable badge; user accepts it or picks a different mood.
   - On LLM failure: **silently skip** — user selects a mood manually.
 
-- **`POST /api/ai/daily-comment`** — `{ trackName, artist, mood, memo } → { comment }`
-  - **Asynchronous, fire-and-forget** after the record row is inserted. The insert must not await this.
-  - Client shows a skeleton, then reconciles via TanStack Query `invalidateQueries` / optimistic update when the comment arrives.
+- **`POST /api/ai/daily-comment`** — `{ recordId } → { comment }`
+  - **Asynchronous.** `saveRecord` starts generation with Next's `after()` once the row is saved (the save never awaits it); this endpoint is the retry path. The server reads the record from the DB, so clients can't forge content; ownership is checked in the route (`docs/adr/0006-ai-comment-policy.md`).
+  - Client shows a skeleton, polls while generating, and reconciles via TanStack Query invalidation when the comment arrives.
   - On failure: surface a retry button.
 
 - **API keys stay server-side.** The client always calls internal routes (`/api/...`), never the LLM or the music API directly.
@@ -102,10 +105,16 @@ Two LLM endpoints, deliberately split by sync vs async so the AI never blocks th
 The frontend never calls iTunes directly — it hits `/api/music/search`, a Route Handler that wraps a `MusicProvider` implementation (`shared/lib/music/`) and returns a normalized response (`trackId`, `trackName`, `artist`, `albumArt`, `previewUrl`). No auth or API key. A short server-side cache absorbs the iTunes Search API rate limit (~20 req/min); the client debounces search input. Swapping providers later = a new `MusicProvider` impl + one wiring change. Rationale: `docs/adr/0003-music-provider-itunes.md`.
 
 ### Auth
-Supabase Auth email login/signup. On first login, redirect to profile setup (nickname + avatar). Route protection via middleware.
+Supabase Auth email login/signup. On first login, redirect to profile setup (nickname + avatar). Access is **login-only, default-deny**: only `/login` and `/signup` are public; everything else requires a session, and `/api/*` answers 401 without one. Enforced in `proxy.ts` (Next 16 renamed middleware) — rules in `features/auth/protected-paths.ts`.
 
-### Realtime (Phase 2)
-Feed `/` subscribes to `records` inserts over Supabase Realtime WebSockets; like counts update live too. Keep UI consistent with TanStack Query invalidation or optimistic updates rather than manual cache surgery.
+### Realtime (Phase 2) — not started
+`/` is now the user's own weekly view. Friends' records will become a new section in its right panel once follow exists, subscribing to `records` inserts over Supabase Realtime (like counts live too). Keep UI consistent with TanStack Query invalidation or optimistic updates rather than manual cache surgery.
+
+## Conventions
+
+- **A "day" is a KST day** (ADR-0007). Use `shared/lib/date/kst.ts` for ranges, keys, and times.
+- **Next 16:** `searchParams` is a Promise (type pages with `PageProps<"/route">`); route protection lives in `proxy.ts`.
+- **Lint enforces React purity:** no `Date.now()` in render, no `setState` directly in an effect — derive state instead.
 
 ## Code Organization — lightweight FSD
 
@@ -113,33 +122,37 @@ Full Feature-Sliced Design is **intentionally not used** (only ~5 pages — the 
 
 ```
 app/                  Next.js routes + Route Handlers (/api/*)
-features/<name>/       record, feed, diary, search, follow — UI + hooks + logic per feature
-entities/<name>/       user, record — shared domain models & components
-shared/ui/             reusable primitives (mood badge, record card, ...)
+features/<name>/       auth, comment, diary, home, nav, profile-setup, record, search — UI + hooks + logic per feature
+entities/<name>/       user, record — shared domain models & helpers
+shared/ui/             reusable primitives (AlbumArt, Avatar, Drawer, icons, ...)
+shared/lib/            Supabase clients, music/AI providers, date/kst, shared hooks
 ```
 
 ## CI/CD & Branching
 
 Set up in **week 1, before feature work** — it's infrastructure used every commit, not a finishing step. Full detail in `docs/ci-cd.md`; deploy-strategy rationale in `docs/adr/0002-ci-cd-deploy-strategy.md`.
 
-- **CI** — `.github/workflows/ci.yml`, job `verify` (lint → typecheck → test → build) on every PR and `main` push. `e2e` (Playwright smoke) added week 2+.
+- **CI** — `.github/workflows/ci.yml`, job `verify` (lint → typecheck → test → build) on every PR and `main` push. An `e2e` job is planned but not added yet.
 - **CD** — Vercel Git integration: PR → preview deploy, `main` merge → production deploy. No Actions deploy job, no approval gate (see ADR-0002 — Actions-triggered deploy was considered and dropped for MVP scope).
 - Runtime env vars (Supabase / LLM) go in **Vercel project → Environment Variables**; also add to GitHub Secrets once `npm run build` in CI needs them.
 - **GitHub Flow**: `main` only, always deployable. Short-lived `feature/*` and `fix/*` branches. Branch protection requires a PR plus the `verify` status check before merge.
+- **DB migrations are not part of CI/CD.** Apply them by hand to the Supabase project right around the merge — procedure in `docs/ci-cd.md`.
 - **Split PRs small enough to merge before they're wired to a screen** (e.g. API/logic first, UI wiring in a later PR) — since `main` merge deploys straight to production.
 
 ## Development Order
 
-**MVP (weeks 1–3, must-ship):**
-1. Next.js/TS/Tailwind scaffold + lightweight-FSD folders + CI/CD pipeline + branch protection
-2. Supabase project + schema/RLS migration
-3. Auth (login/signup/profile setup)
-4. iTunes search Route Handler (`/api/music/search`)
-5. Record form + AI mood-tag suggestion (`/api/ai/mood-suggest`)
-6. Calendar history (`/diary`) + AI daily comment (`/api/ai/daily-comment`, async UI)
-7. Follow & user search (basic) + profile page
+**MVP — status as of 2026-10-16:**
+1. ✅ Next.js/TS/Tailwind scaffold + lightweight-FSD folders + CI/CD pipeline + branch protection
+2. ✅ Supabase project + schema/RLS migration
+3. ✅ Auth (login/signup/profile setup)
+4. ✅ iTunes search Route Handler (`/api/music/search`)
+5. ✅ Record form + AI mood-tag suggestion (`/api/ai/mood-suggest`)
+6. ✅ Calendar history (`/diary`) + AI daily comment (`/api/ai/daily-comment`, async UI)
+7. ⏸ Follow & user search (basic) + profile page — not started (cut from the September scope)
 
-**Phase 2 (week 4, if time allows):** Realtime feed, realtime like reactions, UI polish, accessibility/perf pass.
+Also shipped: one-record-per-day replace-on-save (ADR-0007), global sidebar / top-bar shell, the weekly-poster home with record editing.
+
+**Phase 2:** Realtime feed, realtime like reactions, UI polish, accessibility/perf pass — not started.
 
 **Cut order if time runs short:** (1) Realtime feed + likes, (2) Playwright e2e (keep lint/typecheck/build), (3) follow/user search. Weeks 1–2 scope (record + AI mood suggestion + calendar) must ship regardless.
 
