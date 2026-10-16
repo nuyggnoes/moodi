@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/shared/lib/supabase/server";
-import { MainFeed } from "@/features/feed/MainFeed";
+import { HomeView } from "@/features/home/HomeView";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -12,5 +12,5 @@ export default async function Home() {
     redirect("/login");
   }
 
-  return <MainFeed userId={user.id} />;
+  return <HomeView userId={user.id} />;
 }
