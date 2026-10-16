@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   COMMENT_GENERATING_WINDOW_MS,
@@ -14,11 +14,14 @@ const BOX = "rounded-xl border border-dashed border-border p-2 text-xs text-ink-
 /**
  * 기록의 AI 코멘트 표시: 본문 / 만드는 중 스켈레톤 / 없을 때 "코멘트 받기" 버튼.
  * 코멘트 대상이 아닌 기록(메모가 없거나 짧음)에는 아무것도 그리지 않는다.
+ * `renderReady` 로 코멘트가 있을 때의 모양만 바꿀 수 있다 (예: 줄 수 제한).
  */
 export function AiComment({
   record,
+  renderReady,
 }: {
   record: Pick<MusicRecord, "id" | "memo" | "ai_comment" | "created_at">;
+  renderReady?: (comment: string) => ReactNode;
 }) {
   const queryClient = useQueryClient();
   const [now, setNow] = useState(() => Date.now());
@@ -27,9 +30,10 @@ export function AiComment({
   const mutation = useMutation({
     mutationFn: () => requestDailyComment(record.id),
     onSuccess: () => {
-      // 오늘 피드와 달력 목록 모두 새 코멘트를 다시 읽는다.
+      // 오늘 피드, 달력 목록, 최근 7일 모두 새 코멘트를 다시 읽는다.
       queryClient.invalidateQueries({ queryKey: ["today-feed"] });
       queryClient.invalidateQueries({ queryKey: ["month-records"] });
+      queryClient.invalidateQueries({ queryKey: ["week-records"] });
     },
   });
 
@@ -45,6 +49,7 @@ export function AiComment({
   if (state === "none") return null;
 
   if (state === "ready") {
+    if (renderReady) return <>{renderReady(record.ai_comment ?? "")}</>;
     return <div className={BOX}>{record.ai_comment}</div>;
   }
 

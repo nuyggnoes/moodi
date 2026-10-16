@@ -2,6 +2,7 @@ import {
   kstDateKey,
   kstDayRange,
   kstMonthRange,
+  formatKstTime,
   kstRecentDaysRange,
   kstToday,
 } from "./kst";
@@ -91,5 +92,24 @@ describe("kstRecentDaysRange", () => {
   it("crosses month and year boundaries", () => {
     const { start } = kstRecentDaysRange(new Date("2027-01-02T03:00:00Z"), 7);
     expect(kstDateKey(start)).toBe("2026-12-27");
+  });
+});
+
+describe("formatKstTime", () => {
+  it("formats morning times", () => {
+    expect(formatKstTime("2026-10-13T23:40:00Z")).toBe("오전 8:40"); // 08:40 KST
+  });
+
+  it("formats afternoon times", () => {
+    expect(formatKstTime("2026-10-13T14:05:00Z")).toBe("오후 11:05"); // 23:05 KST
+  });
+
+  it("uses 12 for noon and midnight", () => {
+    expect(formatKstTime("2026-10-13T03:00:00Z")).toBe("오후 12:00"); // 12:00 KST
+    expect(formatKstTime("2026-10-13T15:00:00Z")).toBe("오전 12:00"); // 00:00 KST
+  });
+
+  it("pads minutes", () => {
+    expect(formatKstTime("2026-10-13T00:07:00Z")).toBe("오전 9:07");
   });
 });
