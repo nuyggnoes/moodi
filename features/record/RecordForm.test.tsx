@@ -1,6 +1,8 @@
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RecordForm } from "./RecordForm";
+import { saveRecord } from "./actions";
+import type { MusicRecord } from "@/entities/record/types";
 import type { Track } from "@/shared/lib/music/types";
 
 jest.mock("./actions", () => ({ saveRecord: jest.fn() }));
@@ -38,15 +40,16 @@ function mockSuggestion(body: unknown, ok = true) {
   return fetchMock;
 }
 
-function renderForm() {
+function renderForm(initialRecord: MusicRecord | null = null) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
+  const view = render(
     <QueryClientProvider client={queryClient}>
-      <RecordForm />
+      <RecordForm initialRecord={initialRecord} />
     </QueryClientProvider>,
   );
+  return { ...view, queryClient };
 }
 
 /** 진행 중인 요청이 끝나고 상태가 반영될 시간을 준다 (act 안에서 기다려 경고를 피한다). */
@@ -320,5 +323,101 @@ describe("RecordForm AI mood suggestion", () => {
     await settle();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(moodSourceValue()).toBe("user");
+  });
+});
+
+const TODAY_RECORD: MusicRecord = {
+  id: "r1",
+  user_id: "u1",
+  track_id: "42",
+  track_name: "Love wins all",
+  artist: "IU",
+  album_art: "https://example.com/art.png",
+  preview_url: "https://example.com/p.m4a",
+  mood: "exciting",
+  mood_source: "ai",
+  memo: "오늘은 왠지 마음이 말랑해",
+  ai_comment: "말랑해진 마음이 노래의 결과 맞닿아 있어요.",
+  created_at: "2026-10-14T00:00:00Z",
+  record_date: "2026-10-14",
+};
+
+describe("RecordForm edit mode", () => {
+  it("opens with today's track, mood and memo filled in", () => {
+    mockSuggestion({ suggestedMood: "calm", reason: "x" });
+    renderForm(TODAY_RECORD);
+
+    expect(screen.getByText("오늘의 기록을 수정하고 있어요.")).toBeInTheDocument();
+    expect(screen.getByText("Love wins all")).toBeInTheDocument();
+    expect(screen.getByText("IU")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "설레는" })).toBeChecked();
+    expect(screen.getByPlaceholderText(/어떤 느낌/)).toHaveValue("오늘은 왠지 마음이 말랑해");
+    expect(screen.getByRole("button", { name: "수정하기" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "기록하기" })).not.toBeInTheDocument();
+    expect((document.querySelector('input[name="trackId"]') as HTMLInputElement).value).toBe("42");
+  });
+
+  it("does not ask the AI for a mood on open or when the memo changes", async () => {
+    const fetchMock = mockSuggestion({ suggestedMood: "calm", reason: "x" });
+    renderForm(TODAY_RECORD);
+
+    typeMemo("메모를 이렇게 고쳐 썼어요 조금 더 길게");
+    await settle();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("radio", { name: "설레는" })).toBeChecked();
+  });
+
+  it("keeps the stored mood source while the mood is unchanged", () => {
+    renderForm(TODAY_RECORD);
+    expect(moodSourceValue()).toBe("ai");
+  });
+
+  it("switches to a user source when the mood is changed", () => {
+    renderForm(TODAY_RECORD);
+
+    fireEvent.click(screen.getByRole("radio", { name: "차분한" }));
+
+    expect(moodSourceValue()).toBe("user");
+  });
+
+  it("returns to the stored source if the original mood is picked again", () => {
+    renderForm(TODAY_RECORD);
+
+    fireEvent.click(screen.getByRole("radio", { name: "차분한" }));
+    fireEvent.click(screen.getByRole("radio", { name: "설레는" }));
+
+    expect(moodSourceValue()).toBe("ai");
+  });
+
+  it("keeps a stored user source as user", () => {
+    renderForm({ ...TODAY_RECORD, mood_source: "user" });
+    expect(moodSourceValue()).toBe("user");
+  });
+
+  it("lets the user search for a different track", () => {
+    renderForm(TODAY_RECORD);
+
+    fireEvent.click(screen.getByRole("button", { name: "↺ 다시 검색" }));
+
+    expect(screen.getByText("곡 선택")).toBeInTheDocument();
+  });
+
+  it("clears cached week and month records when saving", () => {
+    const { queryClient } = renderForm(TODAY_RECORD);
+    const remove = jest.spyOn(queryClient, "removeQueries");
+
+    fireEvent.submit(screen.getByRole("button", { name: "수정하기" }).closest("form")!);
+
+    expect(remove).toHaveBeenCalledWith({ queryKey: ["week-records"] });
+    expect(remove).toHaveBeenCalledWith({ queryKey: ["month-records"] });
+    expect(saveRecord).toHaveBeenCalled();
+  });
+
+  it("is the normal new-record form without an initial record", () => {
+    renderForm(null);
+
+    expect(screen.queryByText("오늘의 기록을 수정하고 있어요.")).not.toBeInTheDocument();
+    expect(screen.getByText("곡 선택")).toBeInTheDocument();
   });
 });

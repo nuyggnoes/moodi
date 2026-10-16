@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { SongPicker } from "./SongPicker";
 import { MoodPicker } from "./MoodPicker";
 import { saveRecord, type RecordActionState } from "./actions";
@@ -11,23 +12,51 @@ import { PlayIcon, PauseIcon } from "@/shared/ui/icons";
 import type { Mood } from "@/entities/record/mood";
 import { MEMO_MAX_LENGTH } from "@/entities/record/memo";
 import type { Track } from "@/shared/lib/music/types";
+import type { MusicRecord } from "@/entities/record/types";
 
 const MEMO_COUNTER_THRESHOLD = 170;
 const initialState: RecordActionState = null;
 
-export function RecordForm() {
-  const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
+/** 저장된 기록을 폼의 곡 선택 상태로 되돌린다 (수정 모드). */
+function trackFromRecord(record: MusicRecord): Track {
+  return {
+    trackId: Number(record.track_id),
+    trackName: record.track_name,
+    artist: record.artist,
+    albumArt: record.album_art,
+    previewUrl: record.preview_url,
+  };
+}
+
+/**
+ * 기록 폼. `initialRecord` 가 있으면 오늘 기록을 수정하는 모드다 — 곡·무드·메모가 채워진 채로 열리고,
+ * 저장은 같은 `saveRecord` 가 오늘 기록을 대체한다 (docs/adr/0007).
+ */
+export function RecordForm({ initialRecord = null }: { initialRecord?: MusicRecord | null }) {
+  const queryClient = useQueryClient();
+  const [selectedTrack, setSelectedTrack] = useState<Track | null>(() =>
+    initialRecord ? trackFromRecord(initialRecord) : null,
+  );
   // 사용자가 직접 고른 mood 만 상태로 둔다. 화면의 mood 는 "직접 고른 값 → AI 제안" 순으로 파생한다.
   // 그래서 직접 고른 값은 항상 우선하고, 늦게 도착한 AI 제안은 자동으로 무시된다.
-  const [userMood, setUserMood] = useState<Mood | null>(null);
-  const [memo, setMemo] = useState("");
+  // 수정 모드에서는 저장된 무드를 직접 고른 값으로 시작해, 열자마자 AI 제안이 요청되거나 덮어쓰지 않게 한다.
+  const [userMood, setUserMood] = useState<Mood | null>(initialRecord?.mood ?? null);
+  const [memo, setMemo] = useState(initialRecord?.memo ?? "");
   const [state, formAction, pending] = useActionState(saveRecord, initialState);
 
   // 직접 고른 뒤에는 요청하지 않는다 (직접 고른 값이 항상 이기므로 결과를 쓸 일이 없다).
   const { data, isFetching } = useMoodSuggestion(selectedTrack, memo, userMood === null);
   const suggestion = data ?? null;
   const mood = userMood ?? suggestion?.suggestedMood ?? null;
-  const moodSource = userMood === null && suggestion ? "ai" : "user";
+  // 수정 모드에서 무드를 바꾸지 않았다면 저장돼 있던 출처를 유지한다 (수정만으로 AI 채택률이 왜곡되지 않게).
+  const moodSource =
+    userMood !== null
+      ? initialRecord && userMood === initialRecord.mood && initialRecord.mood_source === "ai"
+        ? "ai"
+        : "user"
+      : suggestion
+        ? "ai"
+        : "user";
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -47,6 +76,13 @@ export function RecordForm() {
     setIsPlaying(true);
   }
 
+  // 저장 후 돌아오는 화면(`/`, `/diary`)이 옛 기록을 잠깐 보여주지 않도록 캐시를 비우고 저장한다.
+  function handleSubmit(formData: FormData) {
+    queryClient.removeQueries({ queryKey: ["week-records"] });
+    queryClient.removeQueries({ queryKey: ["month-records"] });
+    return formAction(formData);
+  }
+
   function handleReselect() {
     setIsPlaying(false);
     setSelectedTrack(null);
@@ -54,6 +90,9 @@ export function RecordForm() {
 
   return (
     <div className="mx-auto flex w-full max-w-[480px] flex-col gap-5 p-4">
+      {initialRecord && (
+        <p className="text-sm text-ink-dim">오늘의 기록을 수정하고 있어요.</p>
+      )}
       {!selectedTrack ? (
         <SongPicker onSelect={setSelectedTrack} />
       ) : (
@@ -93,7 +132,7 @@ export function RecordForm() {
             </div>
           </div>
 
-          <form action={formAction} className="flex flex-col gap-5">
+          <form action={handleSubmit} className="flex flex-col gap-5">
             <input
               type="hidden"
               name="trackId"
@@ -158,7 +197,7 @@ export function RecordForm() {
               disabled={!mood || pending}
               className="rounded-[13px] bg-accent px-4 py-[15px] text-bg transition-colors disabled:cursor-not-allowed disabled:bg-surface disabled:text-ink-faint"
             >
-              {pending ? "저장 중..." : "기록하기"}
+              {pending ? "저장 중..." : initialRecord ? "수정하기" : "기록하기"}
             </button>
           </form>
         </>
