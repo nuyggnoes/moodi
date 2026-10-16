@@ -102,3 +102,30 @@ body {
     }
   }
 }
+
+/*
+ * 주간 캐러셀: 가운데 포스터의 무드 색이 배경으로 번진다 (docs/design/home-mockup.html).
+ * 본문 뒤(-z-10)에 깔리는 고정 레이어이고, 색(--bleed)이 바뀔 때 부드럽게 전환된다.
+ */
+@property --bleed {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #baa7e0;
+}
+
+.mood-bleed {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 55% at 50% 58%, color-mix(in srgb, var(--bleed) 30%, transparent), transparent 70%),
+    radial-gradient(40% 40% at 50% 100%, color-mix(in srgb, var(--bleed) 14%, transparent), transparent 70%);
+  transition: --bleed 0.7s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mood-bleed {
+    transition: none;
+  }
+}

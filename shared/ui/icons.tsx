@@ -81,3 +81,19 @@ export function SidebarToggleIcon() {
     </NavSvg>
   );
 }
+
+export function ChevronLeftIcon() {
+  return (
+    <NavSvg>
+      <path d="M15 5l-7 7 7 7" />
+    </NavSvg>
+  );
+}
+
+export function ChevronRightIcon() {
+  return (
+    <NavSvg>
+      <path d="M9 5l7 7-7 7" />
+    </NavSvg>
+  );
+}
