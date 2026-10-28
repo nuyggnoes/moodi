@@ -7,9 +7,11 @@ import { MoodPicker } from "./MoodPicker";
 import { saveRecord, type RecordActionState } from "./actions";
 import { RECORD_ERROR_MESSAGES } from "./error-codes";
 import { useMoodSuggestion } from "./useMoodSuggestion";
-import { AlbumArt } from "@/shared/ui/AlbumArt";
-import { PlayIcon, PauseIcon } from "@/shared/ui/icons";
-import type { Mood } from "@/entities/record/mood";
+import { MoodChip } from "./MoodChip";
+import { PosterFace } from "@/entities/record/PosterFace";
+import { MoodBleed } from "@/shared/ui/MoodBleed";
+import { formatDayLabel } from "@/shared/lib/date/dayLabel";
+import { DEFAULT_BLEED, MOOD_COLORS, type Mood } from "@/entities/record/mood";
 import { MEMO_MAX_LENGTH } from "@/entities/record/memo";
 import type { Track } from "@/shared/lib/music/types";
 import type { MusicRecord } from "@/entities/record/types";
@@ -29,10 +31,18 @@ function trackFromRecord(record: MusicRecord): Track {
 }
 
 /**
- * 기록 폼. `initialRecord` 가 있으면 오늘 기록을 수정하는 모드다 — 곡·무드·메모가 채워진 채로 열리고,
+ * 기록 폼: 왼쪽에는 홈에 올라갈 포스터의 라이브 미리보기, 오른쪽에는 메모 → 기분 → 저장.
+ * `initialRecord` 가 있으면 오늘 기록을 수정하는 모드다 — 곡·무드·메모가 채워진 채로 열리고,
  * 저장은 같은 `saveRecord` 가 오늘 기록을 대체한다 (docs/adr/0007).
  */
-export function RecordForm({ initialRecord = null }: { initialRecord?: MusicRecord | null }) {
+export function RecordForm({
+  initialRecord = null,
+  todayKey,
+}: {
+  initialRecord?: MusicRecord | null;
+  /** 오늘의 KST 날짜 키(YYYY-MM-DD). 서버가 정해 내려준다 — 렌더 중에 시계를 읽지 않기 위해서. */
+  todayKey: string;
+}) {
   const queryClient = useQueryClient();
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(() =>
     initialRecord ? trackFromRecord(initialRecord) : null,
@@ -88,121 +98,135 @@ export function RecordForm({ initialRecord = null }: { initialRecord?: MusicReco
     setSelectedTrack(null);
   }
 
+  const dayLabel = formatDayLabel(initialRecord?.record_date ?? todayKey);
+  const bleed = mood ? MOOD_COLORS[mood] : DEFAULT_BLEED;
+
   return (
-    <div className="mx-auto flex w-full max-w-[480px] flex-col gap-5 p-4">
-      {initialRecord && (
-        <p className="text-sm text-ink-dim">오늘의 기록을 수정하고 있어요.</p>
-      )}
+    <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-7 px-4 py-8 min-[900px]:px-8 min-[900px]:py-10">
+      <MoodBleed color={bleed} />
+      <audio ref={audioRef} onEnded={() => setIsPlaying(false)} hidden />
+
       {!selectedTrack ? (
-        <SongPicker onSelect={setSelectedTrack} />
+        <div className="mx-auto flex w-full max-w-[560px] flex-col gap-6">
+          <header className="text-center">
+            <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-dim">
+              오늘의 기록 · {dayLabel.date}
+            </p>
+            <h1 className="mt-1.5 text-[clamp(24px,2.6vw,32px)] font-semibold tracking-tight [text-wrap:balance]">
+              오늘 어떤 노래를 들었어요?
+            </h1>
+          </header>
+          <SongPicker onSelect={setSelectedTrack} />
+        </div>
       ) : (
         <>
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={handleReselect}
-              className="self-end text-sm text-ink-dim hover:text-accent"
-            >
-              ↺ 다시 검색
-            </button>
-            <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3.5">
-              <AlbumArt src={selectedTrack.albumArt} size={72} radius={12} />
-              <div className="flex flex-1 flex-col overflow-hidden">
-                <span className="truncate text-[15px] font-medium text-ink">
-                  {selectedTrack.trackName}
-                </span>
-                <span className="truncate text-[12.5px] text-ink-dim">
-                  {selectedTrack.artist}
-                </span>
-              </div>
-              {selectedTrack.previewUrl && (
-                <button
-                  type="button"
-                  onClick={togglePreview}
-                  aria-label={`${selectedTrack.trackName} ${isPlaying ? "정지" : "재생"}`}
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                    isPlaying
-                      ? "bg-accent text-bg"
-                      : "border border-border bg-surface text-ink-dim"
-                  }`}
-                >
-                  {isPlaying ? <PauseIcon /> : <PlayIcon />}
-                </button>
-              )}
-            </div>
-          </div>
+          <header className="text-center">
+            <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-dim">
+              {initialRecord ? "오늘의 기록 수정" : "오늘의 기록"} · {dayLabel.date}
+            </p>
+            <h1 className="mt-1.5 text-[clamp(24px,2.6vw,32px)] font-semibold tracking-tight [text-wrap:balance]">
+              {initialRecord ? "오늘의 기록을 수정하고 있어요." : "오늘의 포스터를 만들어요"}
+            </h1>
+          </header>
 
-          <form action={handleSubmit} className="flex flex-col gap-5">
-            <input
-              type="hidden"
-              name="trackId"
-              value={String(selectedTrack.trackId)}
-            />
-            <input type="hidden" name="trackName" value={selectedTrack.trackName} />
-            <input type="hidden" name="artist" value={selectedTrack.artist} />
-            <input
-              type="hidden"
-              name="albumArt"
-              value={selectedTrack.albumArt ?? ""}
-            />
-            <input
-              type="hidden"
-              name="previewUrl"
-              value={selectedTrack.previewUrl ?? ""}
-            />
-
-            <input type="hidden" name="moodSource" value={moodSource} />
-
-            <MoodPicker
-              value={mood}
-              onChange={setUserMood}
-              loading={userMood === null && isFetching}
-              aiSuggestion={
-                moodSource === "ai" && suggestion
-                  ? { mood: suggestion.suggestedMood, reason: suggestion.reason }
-                  : null
-              }
-            />
-
-            <div className="flex flex-col gap-1">
-              <textarea
-                name="memo"
-                value={memo}
-                onChange={(event) => setMemo(event.target.value)}
-                onInput={(event) => {
-                  const el = event.currentTarget;
-                  el.style.height = "auto";
-                  el.style.height = `${el.scrollHeight}px`;
-                }}
-                maxLength={MEMO_MAX_LENGTH}
-                rows={1}
-                placeholder="오늘 이 곡, 어떤 느낌이었나요? (선택)"
-                className="resize-none overflow-hidden border-b border-transparent bg-transparent text-[15px] leading-[1.7] text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
+          <div className="grid items-center justify-center gap-10 min-[900px]:grid-cols-[320px_minmax(0,420px)] min-[900px]:gap-16">
+            <section aria-label="포스터 미리보기" className="grid justify-items-center gap-3.5">
+              <PosterFace
+                dateText={dayLabel.date}
+                dayText={`${dayLabel.weekdayName} · 오늘`}
+                trackName={selectedTrack.trackName}
+                artist={selectedTrack.artist}
+                albumArt={selectedTrack.albumArt}
+                previewUrl={selectedTrack.previewUrl}
+                isPlaying={isPlaying}
+                onTogglePlay={togglePreview}
+                glowColor={mood ? MOOD_COLORS[mood] : null}
+                footer={<MoodChip mood={mood} />}
+                className="w-[280px] min-[900px]:-rotate-2 motion-safe:transition-[transform,box-shadow] motion-safe:duration-500 min-[900px]:hover:rotate-0"
               />
-              {memo.length >= MEMO_COUNTER_THRESHOLD && (
-                <span className="self-end text-xs text-ink-faint">
-                  {memo.length}/{MEMO_MAX_LENGTH}
-                </span>
+              <p className="font-mono text-xs tracking-wide text-ink-faint">홈에서 이렇게 보여요</p>
+              <button
+                type="button"
+                onClick={handleReselect}
+                className="rounded-full border border-border px-3 py-1.5 text-[13px] text-ink-dim hover:bg-surface-hover hover:text-ink"
+              >
+                ↺ 다시 검색
+              </button>
+            </section>
+
+            <form action={handleSubmit} className="flex flex-col gap-6">
+              <input type="hidden" name="trackId" value={String(selectedTrack.trackId)} />
+              <input type="hidden" name="trackName" value={selectedTrack.trackName} />
+              <input type="hidden" name="artist" value={selectedTrack.artist} />
+              <input type="hidden" name="albumArt" value={selectedTrack.albumArt ?? ""} />
+              <input type="hidden" name="previewUrl" value={selectedTrack.previewUrl ?? ""} />
+              <input type="hidden" name="moodSource" value={moodSource} />
+
+              <div className="flex flex-col gap-2.5">
+                <div className="flex justify-between font-mono text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+                  <label htmlFor="memo">한마디</label>
+                  <span aria-hidden="true">선택</span>
+                </div>
+                <div className="rounded-[18px] border border-border bg-surface px-4 py-3.5 transition-[border-color,box-shadow] focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/15">
+                  <textarea
+                    id="memo"
+                    name="memo"
+                    value={memo}
+                    onChange={(event) => setMemo(event.target.value)}
+                    onInput={(event) => {
+                      const el = event.currentTarget;
+                      el.style.height = "auto";
+                      el.style.height = `${el.scrollHeight}px`;
+                    }}
+                    maxLength={MEMO_MAX_LENGTH}
+                    rows={3}
+                    placeholder="오늘 이 곡, 어떤 느낌이었나요?"
+                    className="min-h-[84px] w-full resize-none bg-transparent text-[15px] leading-[1.7] text-ink placeholder:text-ink-faint focus:outline-none"
+                  />
+                </div>
+                {memo.length >= MEMO_COUNTER_THRESHOLD && (
+                  <span className="self-end text-xs text-ink-faint">
+                    {memo.length}/{MEMO_MAX_LENGTH}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2.5">
+                <p
+                  aria-hidden="true"
+                  className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-faint"
+                >
+                  기분
+                </p>
+                <MoodPicker
+                  value={mood}
+                  onChange={setUserMood}
+                  loading={userMood === null && isFetching}
+                  aiSuggestion={
+                    moodSource === "ai" && suggestion
+                      ? { mood: suggestion.suggestedMood, reason: suggestion.reason }
+                      : null
+                  }
+                />
+              </div>
+
+              {state?.error && (
+                <p role="alert" className="text-sm text-error">
+                  {RECORD_ERROR_MESSAGES[state.error]}
+                </p>
               )}
-            </div>
 
-            {state?.error && (
-              <p role="alert" className="text-sm text-error">
-                {RECORD_ERROR_MESSAGES[state.error]}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={!mood || pending}
-              className="rounded-[13px] bg-accent px-4 py-[15px] text-bg transition-colors disabled:cursor-not-allowed disabled:bg-surface disabled:text-ink-faint"
-            >
-              {pending ? "저장 중..." : initialRecord ? "수정하기" : "기록하기"}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={!mood || pending}
+                className="rounded-full bg-accent px-7 py-3.5 font-semibold text-bg transition-[filter] hover:enabled:brightness-110 disabled:cursor-not-allowed disabled:bg-surface disabled:text-ink-faint"
+              >
+                {pending ? "저장 중..." : initialRecord ? "수정하기" : "기록하기"}
+              </button>
+            </form>
+          </div>
         </>
       )}
-      <audio ref={audioRef} onEnded={() => setIsPlaying(false)} hidden />
     </div>
   );
 }

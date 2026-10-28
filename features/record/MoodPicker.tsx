@@ -50,16 +50,21 @@ export function MoodPicker({
                 className="sr-only"
               />
               <span
-                className={`inline-block cursor-pointer rounded-full px-4 py-[9px] text-sm transition-colors ${
+                className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-[9px] text-sm transition-colors ${
                   isSelected
-                    ? "text-bg"
-                    : "border border-border bg-surface text-ink-dim"
+                    ? "border-transparent font-semibold text-bg"
+                    : "border-border bg-surface text-ink-dim hover:bg-surface-hover hover:text-ink"
                 } ${loading && !isSelected ? "chip-shimmer" : ""}`}
                 style={isSelected ? { background: MOOD_COLORS[option.value] } : undefined}
               >
+                <i
+                  aria-hidden="true"
+                  className={`h-[9px] w-[9px] rounded-full ${isSelected ? "bg-bg" : ""}`}
+                  style={isSelected ? undefined : { background: MOOD_COLORS[option.value] }}
+                />
                 {option.label}
                 {aiSuggestion?.mood === option.value && (
-                  <span aria-hidden="true" className="ml-1.5 text-[10px] font-semibold">
+                  <span aria-hidden="true" className="font-mono text-[10px] font-bold">
                     AI
                   </span>
                 )}

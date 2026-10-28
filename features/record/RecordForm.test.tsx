@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RecordForm } from "./RecordForm";
 import { saveRecord } from "./actions";
@@ -46,7 +46,7 @@ function renderForm(initialRecord: MusicRecord | null = null) {
   });
   const view = render(
     <QueryClientProvider client={queryClient}>
-      <RecordForm initialRecord={initialRecord} />
+      <RecordForm initialRecord={initialRecord} todayKey="2026-10-14" />
     </QueryClientProvider>,
   );
   return { ...view, queryClient };
@@ -419,5 +419,88 @@ describe("RecordForm edit mode", () => {
 
     expect(screen.queryByText("오늘의 기록을 수정하고 있어요.")).not.toBeInTheDocument();
     expect(screen.getByText("곡 선택")).toBeInTheDocument();
+  });
+});
+
+describe("RecordForm poster preview layout", () => {
+  function preview() {
+    return screen.getByRole("region", { name: "포스터 미리보기" });
+  }
+
+  it("shows no poster while searching for a song", () => {
+    renderForm();
+
+    expect(screen.queryByRole("region", { name: "포스터 미리보기" })).not.toBeInTheDocument();
+  });
+
+  it("puts the memo above the mood so the AI suggestion can follow what was written", () => {
+    renderForm();
+    selectTrack();
+
+    const memo = screen.getByPlaceholderText(/어떤 느낌/);
+    const moods = screen.getByRole("radiogroup", { name: "기분" });
+
+    expect(memo.compareDocumentPosition(moods) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("previews the selected track on today's poster with a placeholder until a mood is set", () => {
+    renderForm();
+    selectTrack();
+
+    const poster = within(preview());
+    expect(poster.getByText("10.14")).toBeInTheDocument();
+    expect(poster.getByText("수요일 · 오늘")).toBeInTheDocument();
+    expect(poster.getByText("Next Level")).toBeInTheDocument();
+    expect(poster.getByText("aespa")).toBeInTheDocument();
+    expect(poster.getByText("기분을 고르면 여기에 담겨요")).toBeInTheDocument();
+  });
+
+  it("puts the chosen mood on the poster and tints the background with its color", () => {
+    const { container } = renderForm();
+    selectTrack();
+
+    fireEvent.click(screen.getByRole("radio", { name: "신나는" }));
+
+    const poster = within(preview());
+    expect(poster.getByText("신나는")).toBeInTheDocument();
+    expect(poster.queryByText("기분을 고르면 여기에 담겨요")).not.toBeInTheDocument();
+    const bleed = container.querySelector(".mood-bleed") as HTMLElement;
+    expect(bleed.style.getPropertyValue("--bleed")).toBe("#e8b175");
+  });
+
+  it("uses the default background color before a mood is set", () => {
+    const { container } = renderForm();
+    selectTrack();
+
+    const bleed = container.querySelector(".mood-bleed") as HTMLElement;
+    expect(bleed.style.getPropertyValue("--bleed")).toBe("#baa7e0");
+  });
+
+  it("reflects the AI-suggested mood on the poster", async () => {
+    mockSuggestion({ suggestedMood: "calm", reason: "차분해요" });
+    renderForm();
+    selectTrack();
+    typeMemo(MEMO);
+
+    await waitFor(() => expect(within(preview()).getByText("차분한")).toBeInTheDocument());
+  });
+
+  it("previews the stored record in edit mode, dated by the record", () => {
+    renderForm({ ...TODAY_RECORD, record_date: "2026-10-13" });
+
+    const poster = within(preview());
+    expect(poster.getByText("10.13")).toBeInTheDocument();
+    expect(poster.getByText("Love wins all")).toBeInTheDocument();
+    expect(poster.getByText("설레는")).toBeInTheDocument();
+  });
+
+  it("goes back to searching from the poster", () => {
+    renderForm();
+    selectTrack();
+
+    fireEvent.click(screen.getByRole("button", { name: "↺ 다시 검색" }));
+
+    expect(screen.getByText("곡 선택")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "포스터 미리보기" })).not.toBeInTheDocument();
   });
 });
