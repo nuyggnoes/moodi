@@ -67,7 +67,9 @@ export function DiaryCalendar({ userId }: { userId: string }) {
   const selectedRecords = selectedKey
     ? (recordsByDay.get(selectedKey) ?? [])
     : [];
-  const selectedMood = selectedRecords[selectedRecords.length - 1]?.mood;
+  // 하루 1기록(ADR-0007)이라 한 날의 기록은 하나다.
+  const selectedRecord = selectedRecords[selectedRecords.length - 1] ?? null;
+  const selectedMood = selectedRecord?.mood;
 
   const isCurrentMonth = year === today.year && month === today.month;
 
@@ -151,9 +153,7 @@ export function DiaryCalendar({ userId }: { userId: string }) {
               ))}
             </ul>
           </div>
-        ) : (
-          <p className="text-xs text-ink-faint">이 달은 기록이 없어요.</p>
-        )}
+        ) : null}
 
         <div>
           <div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs text-ink-faint min-[761px]:gap-2">
@@ -222,17 +222,22 @@ export function DiaryCalendar({ userId }: { userId: string }) {
         </div>
       </div>
 
-      {selectedKey && (
-        <aside
-          aria-label="선택한 날의 기록"
-          className="flex min-w-0 flex-col gap-2 min-[1101px]:sticky min-[1101px]:top-7"
-        >
+      <aside
+        aria-label="선택한 날의 기록"
+        className="flex min-w-0 flex-col gap-2 min-[1101px]:sticky min-[1101px]:top-7"
+      >
+        {selectedKey && (
           <span className="font-mono text-xs tracking-[0.06em] text-ink-dim">
             {selectedKey}
           </span>
-          <DayDetail records={selectedRecords} />
-        </aside>
-      )}
+        )}
+        <DayDetail
+          record={selectedRecord}
+          dateKey={selectedKey}
+          todayKey={today.key}
+          isCurrentMonth={isCurrentMonth}
+        />
+      </aside>
     </div>
   );
 }
