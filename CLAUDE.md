@@ -15,6 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `docs/adr/` | Decision records, one per file: 0001 folder structure · 0002 CI/CD deploy · 0003 iTunes · 0004 Supabase · 0005 Gemini · 0006 AI comment policy · 0007 one record per day |
 | `docs/ui-plan.md` | Per-page UX decisions (resolved) and open questions |
 | `docs/design/home-mockup.html` | Interactive mockup of the `/` home (open in a browser) |
+| `docs/design/record-mockup.html` | Interactive mockup of `/record` (poster preview + form) |
+| `docs/design/diary-mockup.html` | Interactive mockups of `/diary` — three variants; variant A (Mood Tide) is the one built |
 
 When these docs and this file disagree, the docs are newer — reconcile before coding.
 (The 1-month MVP schedule is kept in the author's local notes, not in the repo.)
@@ -60,7 +62,7 @@ The iTunes Search API needs no key — nothing to configure for music search.
 |---|---|
 | `/` | The user's last 7 days as a weekly poster carousel (KST, today selected) with a "selected day" detail panel; today's record can be edited from there |
 | `/record` | Capture today's music + mood fast: live poster preview on the left, form (memo → mood → save) on the right; includes AI mood suggestion. `?edit=1` opens today's record for editing (saving replaces it) |
-| `/diary` | Personal music calendar, mood-colored, with AI daily comment |
+| `/diary` | Mood-colored month calendar (tiles tinted by the day's mood, month mood-distribution bar) with the selected day's detail beside it (below on narrow screens) incl. AI daily comment; defaults to today's record, else the latest recorded day; can't navigate past the current month |
 | `/search` | Music search (iTunes). User search by nickname is not built |
 | `/login`, `/signup` | Public auth pages — the only public routes |
 | `/profile/setup` | First-login nickname + avatar setup |
@@ -141,7 +143,7 @@ Set up in **week 1, before feature work** — it's infrastructure used every com
 
 ## Development Order
 
-**MVP — status as of 2026-10-16:**
+**MVP — status as of 2026-10-28:**
 1. ✅ Next.js/TS/Tailwind scaffold + lightweight-FSD folders + CI/CD pipeline + branch protection
 2. ✅ Supabase project + schema/RLS migration
 3. ✅ Auth (login/signup/profile setup)
@@ -150,7 +152,9 @@ Set up in **week 1, before feature work** — it's infrastructure used every com
 6. ✅ Calendar history (`/diary`) + AI daily comment (`/api/ai/daily-comment`, async UI)
 7. ⏸ Follow & user search (basic) + profile page — not started (cut from the September scope)
 
-Also shipped: one-record-per-day replace-on-save (ADR-0007), global sidebar / top-bar shell, the weekly-poster home with record editing.
+Also shipped: one-record-per-day replace-on-save (ADR-0007), global sidebar / top-bar shell, the weekly-poster home with record editing, the `/record` poster-preview layout (#57), and the `/diary` Mood Tide redesign (#61 calendar, #62 detail panel).
+
+**Next candidates:** unify the top spacing of `/`, `/diary`, `/record`, `/search` in `AppShell` (each page sets its own top padding today); mobile layouts for `/record` and `/diary`.
 
 **Phase 2:** Realtime feed, realtime like reactions, UI polish, accessibility/perf pass — not started.
 
