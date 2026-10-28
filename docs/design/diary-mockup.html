@@ -1,0 +1,408 @@
+<title>Moodi 다이어리 목업</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: 앱 셸(아이콘 레일) + 중앙 다이어리. 시안 3종을 상단 탭으로 전환. 앱의 라벤더 미스트 다크 토큰을 그대로 쓰는 단일 다크 디자인. */
+  :root {
+    --bg: #232030;
+    --surface: #2d2839;
+    --surface-hover: #352f43;
+    --border: #3d364c;
+    --ink: #efeaf7;
+    --ink-dim: #a89fc0;
+    --ink-faint: #6e6580;
+    --accent: #baa7e0;
+    --bleed: #baa7e0;
+    --m-exciting: #e8a7c4;
+    --m-calm: #a7b8e8;
+    --m-energetic: #e8b175;
+    --m-sad: #8f9bb8;
+    --m-focused: #8fc9b0;
+    --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    color-scheme: dark;
+  }
+  @property --bleed { syntax: "<color>"; inherits: true; initial-value: #baa7e0; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--font-sans); font-size: 14px; line-height: 1.5;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 0;
+    overflow-x: hidden;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; padding: 0; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+  .bleed {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; transition: --bleed .7s ease;
+    background:
+      radial-gradient(55% 50% at 62% 45%, color-mix(in srgb, var(--bleed) 22%, transparent), transparent 70%),
+      radial-gradient(40% 40% at 50% 100%, color-mix(in srgb, var(--bleed) 10%, transparent), transparent 70%);
+  }
+  .shell { position: relative; z-index: 1; display: grid; grid-template-columns: 64px minmax(0, 1fr); min-height: 100%; margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))) calc(-1 * max(16px, env(safe-area-inset-right, 0px))); }
+  .rail { border-right: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 70%, transparent); display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 0; position: sticky; top: 0; height: 100vh; }
+  .rail .mark { font-weight: 700; width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(135deg, #baa7e0, #e8a7c4); color: #232030; margin-bottom: 14px; }
+  .rail a { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; color: var(--ink-dim); }
+  .rail a[aria-current="page"] { background: var(--surface-hover); color: var(--ink); }
+
+  .page { min-width: 0; padding: 20px max(16px, env(safe-area-inset-right, 0px)) 120px 28px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 26px; }
+  .tab { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-dim); background: color-mix(in srgb, var(--surface) 60%, transparent); }
+  .tab small { font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); margin-right: 6px; letter-spacing: .06em; }
+  .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+  .tab[aria-selected="true"] small { color: color-mix(in srgb, var(--bg) 70%, transparent); }
+  .note { margin: -14px 0 24px; color: var(--ink-faint); font-size: 13px; max-width: 70ch; }
+
+  .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; color: var(--ink-dim); text-transform: uppercase; }
+  .mhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  .mhead h1 { margin: 4px 0 0; font-size: clamp(24px, 3vw, 34px); font-weight: 600; letter-spacing: -.02em; }
+  .mnav { display: flex; gap: 6px; }
+  .circ { width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center; border: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 80%, transparent); }
+  .circ:hover { background: var(--surface-hover); }
+  .circ[disabled] { opacity: .3; cursor: default; }
+
+  .chip { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; font-weight: 500; font-size: 13px;
+    background: color-mix(in srgb, var(--mc) 20%, var(--surface)); border: 1px solid color-mix(in srgb, var(--mc) 55%, transparent); }
+  .chip i { width: 8px; height: 8px; border-radius: 999px; background: var(--mc); }
+  .art { position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; background: linear-gradient(145deg, var(--a), var(--b)); max-width: 100%; }
+  .art::before { content: ""; position: absolute; inset: 0; background: radial-gradient(70% 70% at 25% 20%, rgb(255 255 255 / .35), transparent 60%); mix-blend-mode: soft-light; }
+  .art::after { content: attr(data-init); position: absolute; left: 10%; bottom: 4%; font-size: var(--init, 56px); font-weight: 700; letter-spacing: -.04em; color: rgb(255 255 255 / .28); line-height: 1; }
+
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; max-width: 1080px; }
+  .cal-wrap { min-width: 0; }
+  .wk, .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+  .wk { margin-bottom: 8px; text-align: center; font-size: 12px; color: var(--ink-faint); }
+  .wk span:first-child { color: color-mix(in srgb, var(--m-exciting) 70%, var(--ink-faint)); }
+
+  .panel { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 24px 60px rgba(8,6,16,.35); }
+  .p-date { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--ink-dim); }
+  .p-track { font-weight: 600; font-size: 17px; letter-spacing: -.01em; line-height: 1.3; }
+  .p-artist { color: var(--ink-dim); font-size: 13px; }
+  .blk h3 { margin: 0 0 4px; font-family: var(--font-mono); font-size: 11px; font-weight: 400; letter-spacing: .06em; color: var(--ink-faint); }
+  .blk p { margin: 0; text-wrap: pretty; }
+  .blk.ai p { color: var(--ink-dim); }
+  .empty-box { display: grid; gap: 8px; justify-items: center; text-align: center; padding: 28px 8px; color: var(--ink-faint); border: 1.5px dashed var(--border); border-radius: 16px; }
+  .empty-box b { color: var(--ink-dim); font-weight: 500; }
+  .btn { background: var(--accent); color: var(--bg); font-weight: 600; padding: 10px 22px; border-radius: 999px; margin-top: 6px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: 12px; color: var(--ink-dim); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 8px; height: 8px; border-radius: 999px; background: var(--mc); }
+  .legend b { font-family: var(--font-mono); font-weight: 500; color: var(--ink); }
+
+  /* ---------- A · Mood Tide ---------- */
+  .tide-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; gap: 2px; margin-bottom: 4px; max-width: 520px; }
+  .tide-bar i { background: var(--mc); min-width: 6px; border-radius: 999px; }
+  .tcell { aspect-ratio: 1; border-radius: 16px; padding: 8px 10px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; position: relative;
+    background: color-mix(in srgb, var(--mc) 24%, var(--surface)); border: 1px solid color-mix(in srgb, var(--mc) 40%, transparent); transition: transform .2s ease, box-shadow .2s ease; }
+  .tcell:hover { transform: translateY(-2px); }
+  .tcell .n { font-family: var(--font-mono); font-size: 13px; color: var(--ink); }
+  .tcell .t { font-size: 11px; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tcell.none { background: transparent; border: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+  .tcell.none .n { color: var(--ink-faint); }
+  .tcell.out, .ccell.out { visibility: hidden; }
+  .tcell.future { opacity: .35; cursor: default; background: transparent; border-style: dashed; }
+  .tcell.today .n::after { content: "오늘"; margin-left: 6px; font-family: var(--font-sans); font-size: 10px; color: var(--accent); }
+  .tcell.sel { box-shadow: 0 0 0 2px var(--accent), 0 0 36px color-mix(in srgb, var(--mc) 45%, transparent); }
+
+  /* ---------- B · Cover Wall ---------- */
+  .ccell { aspect-ratio: 1; border-radius: 14px; position: relative; overflow: hidden; transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s ease; display: block; width: 100%; }
+  .ccell .art { position: absolute; inset: 0; aspect-ratio: auto; border-radius: 0; --init: 44px; }
+  .ccell .n { position: absolute; left: 8px; top: 6px; z-index: 2; font-family: var(--font-mono); font-size: 12px; color: #fff; text-shadow: 0 1px 6px rgb(0 0 0 / .5); }
+  .ccell .md { position: absolute; right: 8px; bottom: 8px; z-index: 2; width: 12px; height: 12px; border-radius: 999px; background: var(--mc); box-shadow: 0 0 0 2px rgb(20 16 30 / .65); }
+  .ccell::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .08); border-radius: inherit; pointer-events: none; }
+  .ccell.dim .art { filter: saturate(.55) brightness(.7); }
+  .ccell:hover { transform: scale(1.05); z-index: 3; }
+  .ccell.sel { transform: scale(1.08); z-index: 4; box-shadow: 0 0 0 2px var(--mc), 0 16px 40px rgba(8,6,16,.6), 0 0 40px color-mix(in srgb, var(--mc) 40%, transparent); }
+  .ccell.none { background: color-mix(in srgb, var(--surface) 50%, transparent); border: 1px dashed color-mix(in srgb, var(--border) 80%, transparent); }
+  .ccell.none .n { color: var(--ink-faint); text-shadow: none; }
+  .ccell.future { opacity: .3; cursor: default; }
+  .ccell.today .n { background: var(--accent); color: var(--bg); padding: 0 6px; border-radius: 999px; text-shadow: none; left: 6px; top: 5px; }
+  .big-art { --init: 120px; border-radius: 16px; }
+  .panel.poster { padding: 14px; box-shadow: 0 30px 80px rgba(8,6,16,.6), 0 0 0 1px color-mix(in srgb, var(--mc) 50%, transparent), 0 0 60px color-mix(in srgb, var(--mc) 26%, transparent); }
+
+  /* ---------- C · Journal ---------- */
+  .journal { max-width: 760px; }
+  .strip { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+  .sdot { width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center; font-family: var(--font-mono); font-size: 10px; color: var(--bg); background: var(--mc); position: relative; }
+  .sdot.none { background: transparent; border: 1px solid var(--border); color: var(--ink-faint); }
+  .sdot.future { opacity: .3; border-style: dashed; }
+  .sdot.sel { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+  .stats { display: flex; gap: 28px; flex-wrap: wrap; margin: 18px 0 8px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+  .stat b { display: block; font-size: 22px; font-weight: 600; letter-spacing: -.02em; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 12px; color: var(--ink-dim); }
+  .tl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .entry { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 16px; padding: 18px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); scroll-margin-top: 20px; }
+  .entry .gut { text-align: right; }
+  .entry .gut b { display: block; font-family: var(--font-mono); font-size: 26px; font-weight: 500; line-height: 1; letter-spacing: -.02em; }
+  .entry .gut span { font-size: 12px; color: var(--ink-faint); }
+  .entry .card { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 16px; padding: 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border); position: relative; transition: box-shadow .3s ease, border-color .3s ease; }
+  .entry.sel .card { border-color: color-mix(in srgb, var(--mc) 70%, transparent); box-shadow: 0 0 40px color-mix(in srgb, var(--mc) 25%, transparent); }
+  .entry .art { --init: 40px; border-radius: 12px; }
+  .entry .body { min-width: 0; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .entry .row1 { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; width: 100%; flex-wrap: wrap; }
+  .entry .memo { margin: 0; text-wrap: pretty; }
+  .entry .ai { margin: 0; color: var(--ink-dim); font-size: 13px; padding-left: 12px; border-left: 2px solid color-mix(in srgb, var(--mc) 60%, transparent); }
+  .entry .ai em { font-style: normal; display: block; font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; color: var(--ink-faint); margin-bottom: 2px; }
+  .entry.gap .gut b { color: var(--ink-faint); }
+  .gapline { color: var(--ink-faint); padding: 14px 0 0; }
+  .none-note { color: var(--ink-faint); padding: 40px 0; text-align: center; }
+
+  .controls { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 14px; background: rgb(20 16 30 / .9); border: 1px solid var(--border); backdrop-filter: blur(10px); font-size: 12px; color: var(--ink-dim); max-width: calc(100% - 32px); }
+  .seg { display: inline-flex; background: var(--surface); border-radius: 8px; padding: 2px; }
+  .seg button { padding: 4px 10px; border-radius: 6px; color: var(--ink-dim); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--bg); font-weight: 600; }
+
+  @media (max-width: 1000px) {
+    .split { grid-template-columns: minmax(0, 1fr); }
+    .panel { position: static; }
+  }
+  @media (max-width: 760px) {
+    .shell { grid-template-columns: minmax(0, 1fr); }
+    .rail { display: none; }
+    .page { padding: 16px 16px 120px; }
+    .wk, .grid { gap: 4px; }
+    .tcell { padding: 5px 6px; border-radius: 10px; }
+    .tcell .t { display: none; }
+    .ccell { border-radius: 9px; }
+    .ccell .art { --init: 26px; }
+    .ccell .n { font-size: 10px; left: 5px; }
+    .entry { grid-template-columns: 40px minmax(0, 1fr); gap: 10px; }
+    .entry .gut b { font-size: 18px; }
+    .entry .card { grid-template-columns: 64px minmax(0, 1fr); padding: 10px; gap: 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="bleed" id="bleed" aria-hidden="true"></div>
+<div class="shell">
+  <nav class="rail" aria-label="메뉴">
+    <div class="mark">M</div>
+    <a href="#" aria-label="홈"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></a>
+    <a href="#" aria-label="기록"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></a>
+    <a href="#" aria-current="page" aria-label="다이어리"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></a>
+    <a href="#" aria-label="검색"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></a>
+  </nav>
+  <main class="page">
+    <div class="tabs" role="tablist" id="tabs">
+      <button class="tab" role="tab" data-v="a"><small>A</small>Mood Tide</button>
+      <button class="tab" role="tab" data-v="b"><small>B</small>Cover Wall</button>
+      <button class="tab" role="tab" data-v="c"><small>C</small>Journal</button>
+    </div>
+    <p class="note" id="note"></p>
+    <div id="view"></div>
+  </main>
+</div>
+
+<div class="controls">
+  <span>목업 상태</span>
+  <div class="seg" id="dataSeg">
+    <button data-d="full" aria-pressed="true">기록 많음</button>
+    <button data-d="sparse" aria-pressed="false">듬성듬성</button>
+    <button data-d="none" aria-pressed="false">기록 없음</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var MOODS = { exciting: "설레는", calm: "차분한", energetic: "신나는", sad: "우울한", focused: "집중되는" };
+  var MOOD_KEYS = Object.keys(MOODS);
+  var DOW = ["일", "월", "화", "수", "목", "금", "토"];
+  var TRACKS = [
+    ["Pink + White", "Frank Ocean", "#f2a7b8", "#7b6fd0"],
+    ["Sunset Lover", "Petit Biscuit", "#f4a56a", "#a0407e"],
+    ["Holocene", "Bon Iver", "#b7c6e8", "#4a5a8f"],
+    ["Nights", "Frank Ocean", "#6a8fd0", "#232a5c"],
+    ["Slow Dancing in the Dark", "Joji", "#9a7bd8", "#2b1f55"],
+    ["Electric Feel", "MGMT", "#f2c36a", "#d0507a"],
+    ["Cherry Wine", "Hozier", "#d97a7a", "#5c2236"],
+    ["Weightless", "Marconi Union", "#8fc9b0", "#2c5a60"],
+    ["Dreams", "Fleetwood Mac", "#e8b175", "#7a4a8f"],
+    ["밤편지", "아이유", "#7aa0d8", "#2a2f66"],
+    ["Spring Day", "BTS", "#cfe0f2", "#6f8fc0"],
+    ["Lofi Study", "Kupla", "#8fc9b0", "#3b4f73"],
+    ["Midnight City", "M83", "#e86ab0", "#2b2a7a"],
+    ["오래된 노래", "잔나비", "#e8c39a", "#8a4f4f"],
+    ["Teardrop", "Massive Attack", "#8f9bb8", "#2a2d3f"]
+  ];
+  var MEMOS = {
+    exciting: ["퇴근길에 괜히 웃음이 났다. 오늘 뭔가 좋은 일이 생길 것 같아.", "내일 만나기로 한 약속 생각하면서 계속 반복 재생.", "이유 없이 가슴이 간질간질한 저녁."],
+    calm: ["창가에 앉아 커피를 천천히 마셨다. 아무것도 안 해도 괜찮은 날.", "비 오는 소리랑 같이 들으니까 딱이었다.", "하루를 정리하는 시간. 조용해서 좋았다."],
+    energetic: ["러닝 5km 완주! 이 노래 없었으면 중간에 멈췄을 듯.", "청소하면서 볼륨 최대로 틀었다.", "아침부터 텐션이 높았던 날. 출근길이 짧게 느껴졌다."],
+    sad: ["괜히 마음이 가라앉는 날. 그냥 흘려보내기로 했다.", "오래된 기억이 떠올라서 한참 멍하니 있었다.", "비도 오고, 기운이 없었다."],
+    focused: ["두 시간 동안 한 번도 안 끊기고 코딩했다.", "마감 직전 집중 모드. 이 플레이리스트가 정답.", "도서관에서 보고서 마무리. 가사 없는 곡이 최고."]
+  };
+  var AI = {
+    exciting: ["설렘이 하루 끝까지 따라온 날이네요. 기대가 음악 속에서 한 번 더 부풀었어요.", "들뜬 마음이 곡의 리듬과 닮아 있어요. 내일이 기다려지는 하루였네요."],
+    calm: ["서두르지 않는 하루였어요. 조용한 곡이 그 여유를 그대로 받아줬네요.", "잔잔한 선율처럼 마음도 가라앉은 하루였어요."],
+    energetic: ["몸이 먼저 움직인 날이에요. 곡의 박자가 오늘의 속도와 꼭 맞았네요.", "에너지가 넘치는 하루. 이 곡이 그 에너지를 한 단계 더 올려줬어요."],
+    sad: ["마음이 무거운 날에는 이런 곡이 곁에 있어 주죠. 오늘은 천천히 쉬어가도 괜찮아요.", "조용히 가라앉는 감정을 곡이 대신 말해준 것 같아요."],
+    focused: ["흐름이 끊기지 않은 하루였어요. 곡이 집중의 배경이 되어줬네요.", "몰입의 시간이 길었던 날. 오늘의 성과는 이 선율과 함께였어요."]
+  };
+
+  var TODAY = { y: 2026, m: 9, d: 28 };
+  var state = { v: "a", d: "full", y: 2026, m: 9, sel: null };
+
+  function rng(seed) { return function () { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }; }
+  function daysIn(y, m) { return new Date(y, m + 1, 0).getDate(); }
+  function isFuture(y, m, d) { return y > TODAY.y || (y === TODAY.y && (m > TODAY.m || (m === TODAY.m && d > TODAY.d))); }
+  function monthData(y, m) {
+    var map = {};
+    if (state.d === "none") return map;
+    var r = rng(y * 100 + m * 7 + 13), p = state.d === "full" ? 0.85 : 0.35;
+    for (var d = 1; d <= daysIn(y, m); d++) {
+      if (isFuture(y, m, d) || r() > p) continue;
+      var mood = MOOD_KEYS[Math.floor(r() * 5)];
+      var ti = Math.floor(r() * TRACKS.length), t = TRACKS[ti];
+      map[d] = { d: d, mood: mood, t: t, memo: MEMOS[mood][Math.floor(r() * 3)], ai: AI[mood][Math.floor(r() * 2)] };
+    }
+    return map;
+  }
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+  function art(t, cls, extra) {
+    return '<div class="art ' + (cls || "") + '" style="' + (extra || "") + '--a:' + t[2] + ';--b:' + t[3] + '" data-init="' + esc(t[0].charAt(0)) + '"></div>';
+  }
+  function mc(mood) { return "--mc:var(--m-" + mood + ")"; }
+  function dateLabel(y, m, d) { return y + "." + String(m + 1).padStart(2, "0") + "." + String(d).padStart(2, "0") + " · " + DOW[new Date(y, m, d).getDay()]; }
+  function counts(data) {
+    var c = {}; MOOD_KEYS.forEach(function (k) { c[k] = 0; });
+    Object.keys(data).forEach(function (d) { c[data[d].mood]++; });
+    return c;
+  }
+  function topMood(c) { return MOOD_KEYS.slice().sort(function (a, b) { return c[b] - c[a]; })[0]; }
+  function isToday(d) { return state.y === TODAY.y && state.m === TODAY.m && d === TODAY.d; }
+
+  function ensureSel(data) {
+    var keys = Object.keys(data).map(Number);
+    if (state.sel && (data[state.sel] || (!isFuture(state.y, state.m, state.sel)))) {
+      if (data[state.sel] || state.v !== "c") return;
+    }
+    state.sel = keys.length ? Math.max.apply(null, keys) : null;
+  }
+  function setBleed(rec) {
+    document.getElementById("bleed").style.setProperty("--bleed", rec && state.v !== "c" ? "var(--m-" + rec.mood + ")" : (rec ? "var(--m-" + rec.mood + ")" : "#baa7e0"));
+  }
+
+  function header(data, withBar) {
+    var c = counts(data), n = Object.keys(data).length, nm = new Date(state.y, state.m, 1);
+    var atMax = state.y === TODAY.y && state.m === TODAY.m;
+    var h = '<div class="mhead"><div><div class="eyebrow">' + state.y + " · " + nm.toLocaleString("en", { month: "long" }) + '</div><h1>' + (state.m + 1) + '월의 무드</h1></div>' +
+      '<div class="mnav"><button class="circ" data-nav="-1" aria-label="이전 달">‹</button><button class="circ" data-nav="1" aria-label="다음 달"' + (atMax ? " disabled" : "") + '>›</button></div></div>';
+    if (withBar) {
+      if (n) {
+        h += '<div class="tide-bar">' + MOOD_KEYS.filter(function (k) { return c[k]; }).map(function (k) { return '<i style="' + mc(k) + ';flex:' + c[k] + '"></i>'; }).join("") + '</div>' +
+          '<div class="legend">' + MOOD_KEYS.map(function (k) { return '<span style="' + mc(k) + '"><i></i>' + MOODS[k] + ' <b>' + c[k] + '</b></span>'; }).join("") + '</div>';
+      } else {
+        h += '<div class="legend"><span>아직 이번 달 기록이 없어요</span></div>';
+      }
+    }
+    return h;
+  }
+
+  function panel(rec, cls) {
+    if (!state.sel) return '<aside class="panel"><div class="empty-box"><b>기록이 없는 달이에요</b><span>오늘 들은 음악을 남겨보세요</span><button class="btn">기록하러 가기</button></div></aside>';
+    if (!rec) {
+      var f = isFuture(state.y, state.m, state.sel);
+      return '<aside class="panel"><div class="p-date">' + dateLabel(state.y, state.m, state.sel) + '</div><div class="empty-box"><b>' + (f ? "아직 오지 않은 날이에요" : "이 날은 기록이 없어요") + '</b>' +
+        (isToday(state.sel) ? '<button class="btn">오늘 기록하기</button>' : "") + '</div></aside>';
+    }
+    return '<aside class="panel ' + (cls || "") + '" style="' + mc(rec.mood) + '">' +
+      '<div class="p-date">' + dateLabel(state.y, state.m, rec.d) + '</div>' +
+      (cls === "poster" ? art(rec.t, "big-art") : art(rec.t, "", "width:88px;--init:34px;")) +
+      '<div><div class="p-track">' + esc(rec.t[0]) + '</div><div class="p-artist">' + esc(rec.t[1]) + '</div></div>' +
+      '<div><span class="chip"><i></i>' + MOODS[rec.mood] + '</span></div>' +
+      '<div class="blk"><h3>MEMO</h3><p>' + esc(rec.memo) + '</p></div>' +
+      '<div class="blk ai"><h3>AI COMMENT</h3><p>' + esc(rec.ai) + '</p></div></aside>';
+  }
+
+  function gridCells(data, mk) {
+    var first = new Date(state.y, state.m, 1).getDay(), n = daysIn(state.y, state.m), out = "";
+    for (var i = 0; i < first; i++) out += '<div class="out ' + "tcell" + '"></div>';
+    for (var d = 1; d <= n; d++) out += mk(d, data[d], isFuture(state.y, state.m, d));
+    return out;
+  }
+  var WK = '<div class="wk">' + DOW.map(function (w) { return "<span>" + w + "</span>"; }).join("") + "</div>";
+
+  function viewA(data) {
+    var cells = gridCells(data, function (d, r, f) {
+      var cls = "tcell" + (r ? "" : f ? " future" : " none") + (isToday(d) ? " today" : "") + (state.sel === d ? " sel" : "");
+      return '<button class="' + cls + '" data-day="' + d + '"' + (f ? " disabled" : "") + ' style="' + (r ? mc(r.mood) : "") + '" aria-label="' + (state.m + 1) + "월 " + d + '일">' +
+        '<span class="n">' + d + '</span>' + (r ? '<span class="t">' + esc(r.t[0]) + '</span>' : "") + '</button>';
+    });
+    return header(data, true) + '<div class="split" style="margin-top:22px"><div class="cal-wrap">' + WK + '<div class="grid">' + cells + '</div></div>' + panel(data[state.sel], "") + '</div>';
+  }
+  function viewB(data) {
+    var cells = gridCells(data, function (d, r, f) {
+      var cls = "ccell" + (r ? "" : f ? " future none" : " none") + (isToday(d) ? " today" : "") + (state.sel === d ? " sel" : "") + (r && state.sel !== d ? " dim" : "");
+      return '<button class="' + cls + '" data-day="' + d + '"' + (f ? " disabled" : "") + ' style="' + (r ? mc(r.mood) : "") + '" aria-label="' + (state.m + 1) + "월 " + d + '일">' +
+        (r ? art(r.t) + '<span class="md"></span>' : "") + '<span class="n">' + d + '</span></button>';
+    }).replace(/class="out tcell"/g, 'class="ccell out"');
+    var c = counts(data);
+    var lg = Object.keys(data).length ? '<div class="legend">' + MOOD_KEYS.map(function (k) { return '<span style="' + mc(k) + '"><i></i>' + MOODS[k] + '</span>'; }).join("") + '</div>' : "";
+    return header(data, false) + '<div class="split" style="margin-top:6px"><div class="cal-wrap">' + WK + '<div class="grid">' + cells + '</div>' + lg + '</div>' + panel(data[state.sel], "poster") + '</div>';
+  }
+  function viewC(data) {
+    var n = daysIn(state.y, state.m), strip = "";
+    for (var d = 1; d <= n; d++) {
+      var r = data[d], f = isFuture(state.y, state.m, d);
+      strip += '<button class="sdot' + (r ? "" : f ? " none future" : " none") + (state.sel === d ? " sel" : "") + '" data-day="' + d + '"' + (r ? ' style="' + mc(r.mood) + '"' : "") + ' aria-label="' + d + '일">' + d + '</button>';
+    }
+    var c = counts(data), cnt = Object.keys(data).length, top = cnt ? topMood(c) : null;
+    var streak = 0; if (cnt) { var dd = (state.y === TODAY.y && state.m === TODAY.m) ? TODAY.d : n; while (dd > 0 && data[dd]) { streak++; dd--; } }
+    var stats = '<div class="stats"><div class="stat"><b>' + cnt + '<small style="font-size:13px;color:var(--ink-faint);font-weight:400"> / ' + (state.y === TODAY.y && state.m === TODAY.m ? TODAY.d : n) + '일</b><span>기록한 날</span></div>' +
+      '<div class="stat" ' + (top ? 'style="' + mc(top) + '"' : "") + '><b>' + (top ? '<span style="color:var(--mc)">' + MOODS[top] + '</span>' : "-") + '</b><span>가장 많은 무드</span></div>' +
+      '<div class="stat"><b>' + streak + '일</b><span>연속 기록</span></div></div>';
+    var days = Object.keys(data).map(Number).sort(function (a, b) { return b - a; });
+    var list = days.length ? days.map(function (d) {
+      var r = data[d];
+      return '<li class="entry' + (state.sel === d ? " sel" : "") + '" id="e' + d + '" style="' + mc(r.mood) + '"><div class="gut"><b>' + d + '</b><span>' + DOW[new Date(state.y, state.m, d).getDay()] + '</span></div>' +
+        '<div class="card">' + art(r.t) + '<div class="body"><div class="row1"><div style="min-width:0"><div class="p-track">' + esc(r.t[0]) + '</div><div class="p-artist">' + esc(r.t[1]) + '</div></div><span class="chip"><i></i>' + MOODS[r.mood] + '</span></div>' +
+        '<p class="memo">' + esc(r.memo) + '</p><p class="ai"><em>AI COMMENT</em>' + esc(r.ai) + '</p></div></div></li>';
+    }).join("") : '<li class="none-note"><div class="empty-box"><b>기록이 없는 달이에요</b><span>오늘 들은 음악을 남겨보세요</span><button class="btn">기록하러 가기</button></div></li>';
+    return '<div class="journal">' + header(data, false) + '<div class="strip">' + strip + '</div>' + stats + '<ol class="tl">' + list + '</ol></div>';
+  }
+
+  var NOTES = {
+    a: "달력 안에서 끝나는 구성. 칸 자체가 그날의 무드 색으로 물들고, 상단 띠로 이번 달 무드 분포를 한눈에 봅니다. 오른쪽 패널은 메인 우측 상세 패널과 같은 문법.",
+    b: "앨범 커버 모자이크. 달력이 곧 이번 달 음악 컬렉션이 됩니다. 선택하면 커버가 살아나고 배경이 그날 무드 색으로 번지며, 오른쪽에 메인의 포스터 카드가 나옵니다.",
+    c: "달력 대신 일기장. 상단 점 띠로 달을 훑고, 아래 타임라인에서 메모와 AI 코멘트를 바로 읽습니다. 클릭 없이 읽는 데 최적화."
+  };
+
+  function render() {
+    var data = monthData(state.y, state.m);
+    ensureSel(data);
+    var rec = state.sel ? data[state.sel] : null;
+    setBleed(state.v === "a" ? null : rec);
+    if (state.v === "a") document.getElementById("bleed").style.setProperty("--bleed", rec ? "var(--m-" + rec.mood + ")" : "#baa7e0");
+    document.getElementById("view").innerHTML = state.v === "a" ? viewA(data) : state.v === "b" ? viewB(data) : viewC(data);
+    document.getElementById("note").textContent = NOTES[state.v];
+    document.querySelectorAll(".tab").forEach(function (t) { t.setAttribute("aria-selected", t.dataset.v === state.v ? "true" : "false"); });
+    document.querySelectorAll("#dataSeg button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.d === state.d ? "true" : "false"); });
+  }
+
+  document.getElementById("tabs").addEventListener("click", function (e) {
+    var t = e.target.closest(".tab"); if (!t) return; state.v = t.dataset.v; render();
+  });
+  document.getElementById("dataSeg").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return; state.d = b.dataset.d; state.sel = null; render();
+  });
+  document.getElementById("view").addEventListener("click", function (e) {
+    var nav = e.target.closest("[data-nav]");
+    if (nav && !nav.disabled) {
+      var dm = Number(nav.dataset.nav), d = new Date(state.y, state.m + dm, 1);
+      state.y = d.getFullYear(); state.m = d.getMonth(); state.sel = null; render(); return;
+    }
+    var day = e.target.closest("[data-day]");
+    if (day && !day.disabled) {
+      state.sel = Number(day.dataset.day); render();
+      if (state.v === "c") { var el = document.getElementById("e" + state.sel); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }
+    }
+  });
+  render();
+})();
+</script>
