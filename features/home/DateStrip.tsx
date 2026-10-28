@@ -2,7 +2,7 @@
 
 import { cn } from "@/shared/lib/cn";
 import { MOOD_COLORS } from "@/entities/record/mood";
-import { formatDayLabel } from "./dayLabel";
+import { formatDayLabel } from "@/shared/lib/date/dayLabel";
 import type { WeekDay } from "./weekDays";
 
 type DateStripProps = {

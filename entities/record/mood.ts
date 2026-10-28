@@ -29,3 +29,6 @@ export const MOOD_COLORS: Record<Mood, string> = {
   sad: "#8f9bb8",
   focused: "#8fc9b0",
 };
+
+/** 무드가 정해지지 않았을 때 배경으로 번지는 기본 색 (accent). */
+export const DEFAULT_BLEED = "#baa7e0";

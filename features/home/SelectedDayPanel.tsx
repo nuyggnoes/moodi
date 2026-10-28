@@ -11,7 +11,7 @@ import { AiComment } from "@/features/comment/AiComment";
 import { isCommentTarget } from "@/entities/record/comment";
 import { getMoodLabel, MOOD_COLORS } from "@/entities/record/mood";
 import type { MusicRecord } from "@/entities/record/types";
-import { formatDayLabel } from "./dayLabel";
+import { formatDayLabel } from "@/shared/lib/date/dayLabel";
 import type { WeekDay } from "./weekDays";
 
 type SelectedDayPanelProps = {

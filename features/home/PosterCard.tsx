@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import type { CSSProperties, MouseEvent } from "react";
-import { AlbumArt } from "@/shared/ui/AlbumArt";
-import { PauseIcon, PlayIcon, PlusIcon } from "@/shared/ui/icons";
+import { PlusIcon } from "@/shared/ui/icons";
+import { PosterFace } from "@/entities/record/PosterFace";
 import { cn } from "@/shared/lib/cn";
 import { MOOD_COLORS } from "@/entities/record/mood";
-import { formatDayLabel } from "./dayLabel";
+import { formatDayLabel } from "@/shared/lib/date/dayLabel";
 import type { WeekDay } from "./weekDays";
 
 type PosterCardProps = {
@@ -21,8 +21,10 @@ type PosterCardProps = {
   style?: CSSProperties;
 };
 
-const BASE =
-  "absolute left-1/2 top-1/2 -ml-[140px] -mt-[196px] flex h-[392px] w-[280px] flex-col gap-3 rounded-[22px] border p-3.5 text-left transition-[transform,opacity,box-shadow] duration-[550ms] ease-[cubic-bezier(.2,.8,.2,1)] motion-reduce:transition-none";
+/** 캐러셀 안의 자리: 무대 가운데에 놓이는 280×392 고정 크기와 이동 전환. */
+const POSITION =
+  "absolute left-1/2 top-1/2 -ml-[140px] -mt-[196px] h-[392px] w-[280px] transition-[transform,opacity,box-shadow] duration-[550ms] ease-[cubic-bezier(.2,.8,.2,1)] motion-reduce:transition-none";
+const BASE = `${POSITION} flex flex-col gap-3 rounded-[22px] border p-3.5 text-left`;
 
 /**
  * 주간 캐러셀의 포스터 한 장. 세 가지 중 하나다.
@@ -108,41 +110,22 @@ export function PosterCard({
     );
   }
 
-  const moodColor = MOOD_COLORS[record.mood];
-  const glow = isCenter
-    ? `0 30px 80px rgba(8,6,16,.65), 0 0 0 1px color-mix(in srgb, ${moodColor} 55%, transparent), 0 0 60px color-mix(in srgb, ${moodColor} 28%, transparent)`
-    : "0 24px 60px rgba(8,6,16,.55)";
-
   return (
-    <div
+    <PosterFace
+      dateText={label.date}
+      dayText={`${label.weekdayName}${isToday ? " · 오늘" : ""}`}
+      trackName={record.track_name}
+      artist={record.artist}
+      albumArt={record.album_art}
+      previewUrl={record.preview_url}
+      isPlaying={isPlaying}
+      onTogglePlay={onTogglePlay}
+      glowColor={isCenter ? MOOD_COLORS[record.mood] : null}
+      focusable={isCenter}
       aria-hidden={!isCenter}
       onClick={isCenter ? undefined : onBringToCenter}
-      style={{ ...style, boxShadow: glow }}
-      className={cn(BASE, "border-border bg-surface")}
-    >
-      {header}
-
-      <div className="relative">
-        <AlbumArt src={record.album_art} size={250} radius={14} />
-        <button
-          type="button"
-          tabIndex={focusable}
-          disabled={!record.preview_url}
-          aria-label={`${record.track_name} ${isPlaying ? "정지" : "미리듣기"}`}
-          onClick={(event) => {
-            event.stopPropagation();
-            onTogglePlay();
-          }}
-          className="absolute bottom-2.5 right-2.5 z-10 grid h-10 w-10 place-items-center rounded-full bg-bg/65 text-ink backdrop-blur-sm hover:bg-bg/85 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {isPlaying ? <PauseIcon /> : <PlayIcon />}
-        </button>
-      </div>
-
-      <div className="min-w-0 px-0.5">
-        <p className="truncate text-base font-semibold tracking-tight text-ink">{record.track_name}</p>
-        <p className="truncate text-[13px] text-ink-dim">{record.artist}</p>
-      </div>
-    </div>
+      style={style}
+      className={POSITION}
+    />
   );
 }
