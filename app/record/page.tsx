@@ -1,6 +1,7 @@
 import { RecordForm } from "@/features/record/RecordForm";
 import { getTodayRecord } from "@/features/record/getTodayRecord";
 import { createClient } from "@/shared/lib/supabase/server";
+import { kstToday } from "@/shared/lib/date/kst";
 
 /**
  * `/record` — 기록하기. `?edit` 가 있고 오늘 기록이 있으면 그 값을 채워 수정 모드로 연다.
@@ -18,5 +19,5 @@ export default async function RecordPage({ searchParams }: PageProps<"/record">)
     if (user) initialRecord = await getTodayRecord(supabase, user.id);
   }
 
-  return <RecordForm initialRecord={initialRecord} />;
+  return <RecordForm initialRecord={initialRecord} todayKey={kstToday().key} />;
 }
