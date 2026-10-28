@@ -59,7 +59,7 @@ The iTunes Search API needs no key — nothing to configure for music search.
 | Route | Single purpose |
 |---|---|
 | `/` | The user's last 7 days as a weekly poster carousel (KST, today selected) with a "selected day" detail panel; today's record can be edited from there |
-| `/record` | Capture today's music + mood fast; includes AI mood suggestion. `?edit=1` opens today's record for editing (saving replaces it) |
+| `/record` | Capture today's music + mood fast: live poster preview on the left, form (memo → mood → save) on the right; includes AI mood suggestion. `?edit=1` opens today's record for editing (saving replaces it) |
 | `/diary` | Personal music calendar, mood-colored, with AI daily comment |
 | `/search` | Music search (iTunes). User search by nickname is not built |
 | `/login`, `/signup` | Public auth pages — the only public routes |
@@ -123,7 +123,7 @@ Full Feature-Sliced Design is **intentionally not used** (only ~5 pages — the 
 ```
 app/                  Next.js routes + Route Handlers (/api/*)
 features/<name>/       auth, comment, diary, home, nav, profile-setup, record, search — UI + hooks + logic per feature
-entities/<name>/       user, record — shared domain models & helpers
+entities/<name>/       user, record — shared domain models & helpers (record also holds the `PosterFace` card used by both `/` and `/record`)
 shared/ui/             reusable primitives (AlbumArt, Avatar, Drawer, icons, ...)
 shared/lib/            Supabase clients, music/AI providers, date/kst, shared hooks
 ```
