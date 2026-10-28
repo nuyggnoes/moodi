@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { RightPanel } from "@/features/nav/RightPanel";
-import { formatDayLabel } from "./dayLabel";
+import { formatDayLabel } from "@/shared/lib/date/dayLabel";
 import { SelectedDayNote } from "./SelectedDayNote";
 import { SelectedDayPanel } from "./SelectedDayPanel";
 import { useWeekRecords } from "./useWeekRecords";

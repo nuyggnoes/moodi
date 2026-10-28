@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/shared/ui/icons";
 import { useElementWidth } from "@/shared/lib/useElementWidth";
-import { MOOD_COLORS } from "@/entities/record/mood";
+import { DEFAULT_BLEED, MOOD_COLORS } from "@/entities/record/mood";
+import { MoodBleed } from "@/shared/ui/MoodBleed";
 import { DateStrip } from "./DateStrip";
 import { PosterCard } from "./PosterCard";
 import { getPosterTransform, swipeTarget } from "./posterLayout";
@@ -21,7 +22,6 @@ type WeekCarouselProps = {
 
 const DEFAULT_STAGE_WIDTH = 980;
 const DRAG_CLICK_GUARD_PX = 6;
-const DEFAULT_BLEED = "#baa7e0";
 
 /**
  * 최근 7일 코버플로 캐러셀: 가운데 포스터를 크게, 양옆은 기울여 보여준다.
@@ -122,11 +122,7 @@ export function WeekCarousel({ days, selectedIndex, onSelect, belowStage }: Week
 
   return (
     <div className="flex w-full flex-col items-center gap-5">
-      <div
-        aria-hidden="true"
-        className="mood-bleed"
-        style={{ "--bleed": bleed } as CSSProperties}
-      />
+      <MoodBleed color={bleed} />
 
       <section
         ref={stageRef}
